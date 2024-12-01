@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+.yarn/
+.pnp.*
+
+# Build outputs
+build/
+dist/
+*.node
+.zig-cache/
+zig-cache/
+zig-out/
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test files
+coverage/
+.nyc_output/
+test-output.pdf
+*.test.js
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Debug files
+*.dSYM/
+
+# Project specific
+# Add any other files/folders specific to your project 

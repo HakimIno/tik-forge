@@ -1,0 +1,54 @@
+{
+  "name": "tik-forge",
+  "version": "1.1.1",
+  "description": "A high-performance document processing library for Node.js, built with Zig. Provides native implementations for Excel, Word, and PDF manipulation with optimized memory usage and multi-threading capabilities.",
+  "main": "index.js",
+  "scripts": {
+    "install": "node-gyp rebuild && zig build",
+    "clean": "rm -rf build/ zig-out/ zig-cache/",
+    "prebuild": "npm run clean",
+    "build": "zig build",
+    "test": "mocha test/**/*.test.js",
+    "test:unit": "mocha test/unit/**/*.test.js",
+    "test:integration": "mocha test/integration/**/*.test.js",
+    "test:coverage": "nyc mocha test/**/*.test.js",
+    "debug": "NODE_DEBUG=module node --napi-modules ./index.js"
+  },
+  "files": [
+    "src/",
+    "build.zig",
+    "binding.gyp",
+    "index.js"
+  ],
+  "keywords": [
+    "document",
+    "excel",
+    "word",
+    "pdf",
+    "native",
+    "addon",
+    "zig",
+    "performance",
+    "multi-threading"
+  ],
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "node-addon-api": "^7.0.0"
+  },
+  "devDependencies": {
+    "chai": "^4.5.0",
+    "mocha": "^10.8.2",
+    "nyc": "^15.1.0"
+  },
+  "binary": {
+    "module_path": "zig-out/lib",
+    "module_name": "tik-forge"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HakimIno/tik-forge.git"
+  },
+  "gypfile": true,
+  "author": "weerachit utnok",
+  "license": "MIT"
+}
