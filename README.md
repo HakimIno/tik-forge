@@ -6,8 +6,6 @@ A high-performance PDF and Excel generator library for Node.js
 
 ```bash
 npm install tik-forge
-yarn add tik-forge
-bun add tik-forge
 ```
 
 ```bash
