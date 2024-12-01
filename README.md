@@ -10,6 +10,14 @@ yarn add tik-forge
 bun add tik-forge
 ```
 
+```bash
+yarn add tik-forge
+```
+
+```bash
+bun add tik-forge
+```
+
 ## Requirements
 
 - Node.js >= 14.0.0
