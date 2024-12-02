@@ -41,8 +41,8 @@
   ],
   "dependencies": {
     "exceljs": "^4.4.0",
-    "node-addon-api": "^7.0.0",
-    "node-api-headers": "^1.1.0",
+    "node-addon-api": "^5.0.0",
+    "node-api-headers": "^1.0.0",
     "prebuild-install": "^7.1.1",
     "prebuildify": "^5.0.1"
   },
