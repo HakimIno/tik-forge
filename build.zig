@@ -1,9 +1,23 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
-    // Get target and optimize options
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+
+    const target_info = target.result;
+    const is_windows = target_info.os.tag == .windows;
+    const is_macos = target_info.os.tag == .macos;
+    const is_linux = target_info.os.tag == .linux;
+    const is_arm = target_info.cpu.arch == .aarch64;
+    const is_x64 = target_info.cpu.arch == .x86_64;
+
+    if (!is_x64 and !is_arm) {
+        @panic("Unsupported CPU architecture. Only x64 and ARM64 are supported.");
+    }
+
+    if (!is_windows and !is_macos and !is_linux) {
+        @panic("Unsupported operating system. Only Windows, macOS, and Linux are supported.");
+    }
 
     const lib = b.addSharedLibrary(.{
         .name = "tik-forge",
@@ -13,29 +27,49 @@ pub fn build(b: *std.Build) void {
         .pic = true,
     });
 
-    // Platform-specific settings
-    const target_info = target.result;
-    const is_windows = target_info.os.tag == .windows;
-    const is_macos = target_info.os.tag == .macos;
+    // Read node info from file
+    const node_info = readNodeInfo(b.allocator) catch unreachable;
+    defer node_info.deinit();
 
-    // Add Node.js headers based on platform
-    if (is_windows) {
-        lib.addIncludePath(.{ .cwd_relative = "node_modules/node-addon-api" });
-        lib.addIncludePath(.{ .cwd_relative = "C:/Users/USERNAME/AppData/Local/node-gyp/Cache/20.18.1/include/node" });
-    } else if (is_macos) {
-        lib.addIncludePath(.{ .cwd_relative = "node_modules/node-addon-api" });
-        lib.addIncludePath(.{ .cwd_relative = "/Users/weerachit/Library/Caches/node-gyp/20.18.1/include/node" });
+    // Add Node.js headers
+    lib.addIncludePath(.{ .cwd_relative = "node_modules/node-addon-api" });
+    
+    // Add platform-specific Node.js headers using node_info
+    if (is_macos) {
+        if (is_arm) {
+            // Path สำหรับ ARM Mac
+            const include_path = b.fmt("/opt/homebrew/lib/node_modules/npm/node_modules/node-gyp/include/node", .{});
+            lib.addIncludePath(.{ .cwd_relative = include_path });
+            lib.linker_allow_shlib_undefined = true;
+            lib.addRPath(.{ .cwd_relative = "/opt/homebrew/lib" });
+        } else {
+            // Path สำหรับ Intel Mac
+            const include_path = b.fmt("/Users/{s}/Library/Caches/node-gyp/{s}/include/node", .{
+                node_info.username, node_info.version
+            });
+            lib.addIncludePath(.{ .cwd_relative = include_path });
+        }
+    } else if (is_windows) {
+        const include_path = b.fmt("C:/Users/{s}/AppData/Local/node-gyp/Cache/{s}/include/node", .{
+            node_info.username, node_info.version
+        });
+        lib.addIncludePath(.{ .cwd_relative = include_path });
     } else {
         // Linux
-        lib.addIncludePath(.{ .cwd_relative = "node_modules/node-addon-api" });
-        lib.addIncludePath(.{ .cwd_relative = "/usr/include/node" });
+        const include_path = b.fmt("/home/{s}/.cache/node-gyp/{s}/include/node", .{
+            node_info.username, node_info.version
+        });
+        lib.addIncludePath(.{ .cwd_relative = include_path });
     }
 
     // Add system headers and C library
     lib.linkLibC();
 
     // Platform-specific linker settings
-    if (is_windows) {
+    if (is_macos and is_arm) {
+        // ARM Mac specific settings
+        lib.linker_allow_shlib_undefined = true;
+    } else if (is_windows) {
         lib.linkSystemLibrary("node");
     } else {
         lib.linker_allow_shlib_undefined = true;
@@ -51,10 +85,8 @@ pub fn build(b: *std.Build) void {
         },
     }
 
-    // Install step
     const install_lib = b.addInstallArtifact(lib, .{});
 
-    // Platform-specific copy command
     const copy_step = if (is_windows) blk: {
         break :blk b.addSystemCommand(&.{
             "cmd.exe", "/C",
@@ -88,9 +120,9 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_main_tests.step);
 
     // Add Node.js headers
-    lib.addIncludePath(.{ .cwd_relative = "/Users/weerachit/Library/Caches/node-gyp/20.18.1/include" });
-    lib.addIncludePath(.{ .cwd_relative = "node_modules/node-addon-api" });
-    lib.addIncludePath(.{ .cwd_relative = "node_modules/node-addon-api/src" });
+    // lib.addIncludePath(.{ .cwd_relative = "/Users/weerachit/Library/Caches/node-gyp/20.18.1/include" });
+    // lib.addIncludePath(.{ .cwd_relative = "node_modules/node-addon-api" });
+    // lib.addIncludePath(.{ .cwd_relative = "node_modules/node-addon-api/src" });
 
     // Link with libc
     lib.linkLibC();
@@ -106,4 +138,42 @@ pub fn build(b: *std.Build) void {
 
     // Make install the default step
     b.getInstallStep().dependOn(&install_step.step);
+}
+
+const NodeInfo = struct {
+    version: []const u8,
+    username: []const u8,
+    homedir: []const u8,
+    allocator: std.mem.Allocator,
+
+    pub fn deinit(self: *NodeInfo) void {
+        self.allocator.free(self.version);
+        self.allocator.free(self.username);
+        self.allocator.free(self.homedir);
+    }
+};
+
+fn readNodeInfo(allocator: std.mem.Allocator) !*NodeInfo {
+    const file = try std.fs.cwd().openFile("node-info.txt", .{});
+    defer file.close();
+
+    const content = try file.readToEndAlloc(allocator, 1024 * 1024);
+    defer allocator.free(content);
+
+    const parsed = try std.json.parseFromSlice(
+        std.json.Value,
+        allocator,
+        content,
+        .{},
+    );
+    defer parsed.deinit();
+
+    const info = try allocator.create(NodeInfo);
+    info.* = .{
+        .version = try allocator.dupe(u8, parsed.value.object.get("version").?.string),
+        .username = try allocator.dupe(u8, parsed.value.object.get("username").?.string),
+        .homedir = try allocator.dupe(u8, parsed.value.object.get("homedir").?.string),
+        .allocator = allocator,
+    };
+    return info;
 } 

@@ -24,6 +24,28 @@ bun add tik-forge
 - wkhtmltopdf (for PDF generation)
 - ssconvert (for Excel conversion)
 
+## System Requirements
+
+### Supported Operating Systems
+- Windows (x64)
+- macOS (Intel x64 & Apple Silicon ARM64)
+- Linux (x64 & ARM64)
+
+### Prerequisites
+- Node.js >= 14.0.0
+- Zig compiler
+- Python (for node-gyp)
+- C/C++ build tools:
+  - Windows: Visual Studio Build Tools
+  - macOS: Xcode Command Line Tools
+  - Linux: GCC and development tools
+
+### Supported Apple Silicon Macs
+- M1
+- M2
+- M3
+- Future Apple Silicon chips
+
 ## Usage
 
 ```javascript

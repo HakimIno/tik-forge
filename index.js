@@ -1,2 +1,2 @@
-const addon = require('./build/Release/tik-forge');
-module.exports = addon;
+const tik_forge = require('./build/Release/tik-forge.node');
+module.exports = tik_forge;
