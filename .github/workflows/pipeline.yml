@@ -14,15 +14,23 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        node: [14, 16, 18, 20]
+        os: [ubuntu-latest, macos-latest]
+        node: [16, 18, 20]
         architecture: [x64, arm64]
         exclude:
-          # Windows ARM64 ยังไม่รองรับใน GitHub Actions
           - os: windows-latest
-            architecture: arm64
     steps:
       - uses: actions/checkout@v2
+      
+      - name: Set up QEMU
+        if: matrix.architecture == 'arm64'
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: arm64
+      
+      - name: Set up Docker Buildx
+        if: matrix.architecture == 'arm64'
+        uses: docker/setup-buildx-action@v2
       
       - name: Setup Node.js
         uses: actions/setup-node@v2
@@ -35,11 +43,19 @@ jobs:
         with:
           version: 0.13.0
       
-      - name: Install dependencies
-        run: npm install
+      - name: Build ARM64
+        if: matrix.architecture == 'arm64'
+        run: |
+          docker buildx build --platform linux/arm64 \
+            --build-arg NODE_VERSION=${{ matrix.node }} \
+            -t tik-forge-builder .
+          docker run --rm --platform linux/arm64 tik-forge-builder
       
-      - name: Build
-        run: npm run build
+      - name: Build x64
+        if: matrix.architecture == 'x64'
+        run: |
+          npm install
+          npm run build
       
       - name: Test
         run: npm test
@@ -51,17 +67,22 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
       - name: Setup Node.js
         uses: actions/setup-node@v2
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
       
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Build
-        run: npm run build
+      - name: Build Multi-arch
+        run: |
+          npm ci
+          npm run build
       
       - name: Publish to NPM
         run: npm publish
