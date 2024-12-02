@@ -39,12 +39,16 @@
     "multi-threading"
   ],
   "dependencies": {
-    "exceljs": "^4.4.0"
+    "exceljs": "^4.4.0",
+    "node-addon-api": "^7.0.0",
+    "node-api-headers": "^1.1.0",
+    "prebuild-install": "^7.1.1"
   },
   "devDependencies": {
     "mocha": "^10.2.0",
     "nyc": "^15.1.0",
-    "chai": "^4.3.10"
+    "chai": "^4.3.10",
+    "prebuildify": "^5.0.1"
   },
   "binary": {
     "module_path": "zig-out/lib",
