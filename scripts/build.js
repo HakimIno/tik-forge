@@ -11,7 +11,7 @@ const isMac = platform === 'darwin';
 const isArm64 = arch === 'arm64';
 
 // กำหนดค่า library prefix และ extension ตาม platform
-const libPrefix = isMac ? 'lib' : '';
+const libPrefix = '';
 const libExtension = isMac ? '.dylib' : (isLinux ? '.so' : '.dll');
 
 // กำหนดค่าตาม platform
@@ -55,14 +55,18 @@ execSync('ls -R zig-out/', { stdio: 'inherit' });
 
 // ตรวจสอบและ copy ไฟล์
 const possibleSourcePaths = [
-    path.join(__dirname, '..', 'zig-out', 'lib', `${libPrefix}tik-forge.node${libExtension}`),
-    path.join(__dirname, '..', 'zig-out', 'zig-out', 'lib', `${libPrefix}tik-forge.node${libExtension}`)
+    path.join(__dirname, '..', 'zig-out', 'lib', `libtik-forge.node${libExtension}`),
+    path.join(__dirname, '..', 'zig-out', 'zig-out', 'lib', `libtik-forge.node${libExtension}`),
+    path.join(__dirname, '..', 'zig-out', `libtik-forge.node${libExtension}`),
+    path.join(__dirname, '..', 'zig-out', `tik-forge.node${libExtension}`)
 ];
 
 let sourceFile;
-for (const path of possibleSourcePaths) {
-    if (fs.existsSync(path)) {
-        sourceFile = path;
+for (const filePath of possibleSourcePaths) {
+    console.log(`Checking path: ${filePath}`);
+    if (fs.existsSync(filePath)) {
+        sourceFile = filePath;
+        console.log(`Found library at: ${filePath}`);
         break;
     }
 }
@@ -70,6 +74,15 @@ for (const path of possibleSourcePaths) {
 if (!sourceFile) {
     console.error('Searched in paths:');
     possibleSourcePaths.forEach(p => console.error(`- ${p}`));
+    
+    // แสดงรายการไฟล์ทั้งหมดใน zig-out
+    console.error('\nActual files in zig-out:');
+    try {
+        execSync('find zig-out -type f', { stdio: 'inherit' });
+    } catch (e) {
+        console.error('Error listing files:', e);
+    }
+    
     throw new Error('Library not found in any of the expected locations');
 }
 
