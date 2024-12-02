@@ -54,17 +54,23 @@ console.log('\nFiles in zig-out:');
 execSync('ls -R zig-out/', { stdio: 'inherit' });
 
 // ตรวจสอบและ copy ไฟล์
-const sourceFile = path.join(
-    __dirname, 
-    '..', 
-    'zig-out', 
-    'zig-out', 
-    'lib', 
-    `${libPrefix}tik-forge.node${libExtension}`
-);
+const possibleSourcePaths = [
+    path.join(__dirname, '..', 'zig-out', 'lib', `${libPrefix}tik-forge.node${libExtension}`),
+    path.join(__dirname, '..', 'zig-out', 'zig-out', 'lib', `${libPrefix}tik-forge.node${libExtension}`)
+];
 
-if (!fs.existsSync(sourceFile)) {
-    throw new Error(`Library not found at ${sourceFile}`);
+let sourceFile;
+for (const path of possibleSourcePaths) {
+    if (fs.existsSync(path)) {
+        sourceFile = path;
+        break;
+    }
+}
+
+if (!sourceFile) {
+    console.error('Searched in paths:');
+    possibleSourcePaths.forEach(p => console.error(`- ${p}`));
+    throw new Error('Library not found in any of the expected locations');
 }
 
 console.log(`Found library at: ${sourceFile}`);
