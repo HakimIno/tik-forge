@@ -2,29 +2,31 @@
   "name": "tik-forge",
   "version": "1.2.20",
   "description": "A high-performance document processing library for Node.js, built with Zig. Provides native implementations for Excel, Word, and PDF manipulation with optimized memory usage and multi-threading capabilities.",
-  "main": "index.js",
   "scripts": {
     "build": "npm run clean && node scripts/build.js",
-    "prebuildify": "prebuildify --napi --strip",
-    "prebuild:upload": "prebuild --upload -t 18.0.0 -t 20.0.0",
-    "clean": "rm -rf build/ zig-out/ zig-cache/ prebuilds/",
+    "build:only": "node scripts/build.js",
+    "prebuild": "node scripts/build.js && prebuildify --napi --strip -t 18.0.0 -t 20.0.0",
+    "install": "prebuild-install || npm run build",
     "postinstall": "node scripts/postinstall.js",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "mocha \"test/unit/**/*.test.js\" --timeout 10000",
     "test:integration": "mocha \"test/integration/**/*.test.js\" --timeout 10000",
     "test:coverage": "nyc mocha \"test/unit/**/*.test.js\" \"test/integration/**/*.test.js\" --timeout 10000",
     "test:watch": "mocha --watch \"test/unit/**/*.test.js\" \"test/integration/**/*.test.js\" --timeout 10000",
-    "prepublishOnly": "npm run build && npm run test"
+    "prepublishOnly": "npm run build && npm run test",
+    "clean": "rm -rf build/ zig-out/ zig-cache/ prebuilds/"
   },
+  "main": "index.js",
+  "types": "index.d.ts",
   "files": [
-    "src/",
-    "scripts/build.js",
-    "scripts/postinstall.js",
-    "binding.gyp",
-    "build.zig",
     "index.js",
     "index.d.ts",
-    "build/Release/tik-forge.node"
+    "src",
+    "binding.gyp",
+    "scripts",
+    "prebuilds",
+    "build.zig",
+    "build.zig.zon"
   ],
   "keywords": [
     "document",
@@ -40,21 +42,22 @@
   "dependencies": {
     "exceljs": "^4.4.0",
     "node-addon-api": "^7.0.0",
-    "node-api-headers": "^1.0.0",
-    "prebuild-install": "^7.1.1"
+    "node-api-headers": "^1.1.0",
+    "prebuild-install": "^7.1.1",
+    "prebuildify": "^5.0.1"
   },
   "devDependencies": {
     "mocha": "^10.2.0",
     "nyc": "^15.1.0",
     "chai": "^4.3.10",
-    "prebuildify": "^5.0.1",
     "npm-run-all": "^4.1.5"
   },
   "binary": {
     "module_name": "tik-forge",
-    "module_path": "build/Release",
-    "host": "https://github.com/YourUsername/tik-forge/releases/download/",
-    "remote_path": "{version}"
+    "module_path": "prebuilds/{platform}-{arch}",
+    "host": "https://github.com/YOUR_USERNAME/tik-forge/releases/download/",
+    "remote_path": "v{version}",
+    "package_name": "prebuilds-{platform}-{arch}-node{node_abi}.tar.gz"
   },
   "repository": {
     "type": "git",
@@ -72,7 +75,6 @@
   "gypfile": true,
   "author": "weerachit utnok",
   "license": "MIT",
-  "types": "index.d.ts",
   "directories": {
     "test": "test"
   },

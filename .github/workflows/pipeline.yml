@@ -33,14 +33,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       
-      - name: Cache npm dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-      
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -53,9 +45,10 @@ jobs:
           version: 0.13.0
           
       - name: Install dependencies
-        run: |
-          npm ci
-          npm install -g node-gyp
+        run: npm ci
+        
+      - name: Build
+        run: npm run build
         
       - name: Run tests
         run: |
@@ -120,25 +113,14 @@ jobs:
           npm install -g node-gyp
         
       - name: Build prebuilds
-        run: |
-          npm run prebuildify
-          ls -la prebuilds/
+        run: npm run prebuildify
         
       - name: Package prebuilds
         run: |
+          mkdir -p prebuilds
           tar -czf prebuilds-${{ matrix.os }}-${{ matrix.arch }}-node${{ matrix.node }}.tar.gz prebuilds/
-          ls -la *.tar.gz
         
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: prebuilds-${{ matrix.os }}-${{ matrix.arch }}-node${{ matrix.node }}.tar.gz
-          token: ${{ secrets.GITHUB_TOKEN }}
-          draft: false
-          prerelease: false
-          
-      - name: Upload artifacts
+      - name: Upload prebuilds
         uses: actions/upload-artifact@v3
         with:
           name: prebuilds-${{ matrix.os }}-${{ matrix.arch }}-node${{ matrix.node }}

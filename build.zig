@@ -68,7 +68,7 @@ pub fn build(b: *std.Build) void {
 
     // Set install step with correct output path
     const install_lib = b.addInstallArtifact(lib, .{
-        .dest_dir = .{ .override = .{ .custom = "zig-out/lib" } },
+        .dest_dir = .{ .override = .{ .custom = "zig-out" } },
     });
 
     // กำหนดชื่อไฟล์ output ให้ตรงกับที่ script ต้องการ

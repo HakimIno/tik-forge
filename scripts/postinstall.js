@@ -1,33 +1,44 @@
-const { execSync } = require('child_process');
+const os = require('os');
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
-function checkZig() {
+async function install() {
     try {
-        execSync('zig version', { stdio: 'ignore' });
-        return true;
-    } catch (e) {
-        return false;
+        // ตรวจสอบว่ามี prebuild binary หรือไม่
+        const platform = os.platform();
+        const arch = os.arch();
+        const prebuildPath = path.join(__dirname, '..', 'prebuilds', `${platform}-${arch}`);
+        
+        if (fs.existsSync(prebuildPath)) {
+            console.log('Using prebuilt binary');
+            return;
+        }
+
+        // ถ้าไม่มี prebuild ให้ build เอง
+        console.log('No prebuilt binary found, building from source...');
+        
+        // ติดตั้ง Zig ถ้าจำเป็น
+        try {
+            execSync('zig version');
+        } catch (e) {
+            console.log('Zig not found, installing...');
+            if (platform === 'darwin') {
+                execSync('brew install zig');
+            } else if (platform === 'linux') {
+                // Add Linux-specific Zig installation
+                console.log('Please install Zig manually on Linux');
+            }
+        }
+
+        // Build
+        execSync('npm run build', { stdio: 'inherit' });
+        console.log('Build completed successfully');
+        
+    } catch (error) {
+        console.error('Build failed:', error);
+        process.exit(1);
     }
 }
 
-function main() {
-    // ตรวจสอบว่ามี Zig หรือไม่
-    if (!checkZig()) {
-        console.error('Zig is required but not found.');
-        console.error('Please install Zig from https://ziglang.org/');
-        process.exit(1);
-    }
-
-    // Build
-    try {
-        execSync('zig build', { stdio: 'inherit' });
-    } catch (e) {
-        console.error('Failed to build:', e);
-        process.exit(1);
-    }
-
-    console.log('Build completed successfully');
-}
-
-main(); 
+install().catch(console.error); 

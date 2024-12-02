@@ -11,30 +11,25 @@
         "<!(node -p \"require('node-addon-api').gyp\")"
       ],
       "conditions": [
-        ['OS=="win"', {
-          "libraries": [
-            "-L<(module_root_dir)/zig-out/zig-out/lib",
-            "<(module_root_dir)/zig-out/zig-out/lib/tik-forge.dll.lib"
-          ]
-        }],
         ['OS=="mac"', {
           "libraries": [
-            "<(module_root_dir)/zig-out/zig-out/lib/libtik-forge.node.dylib"
+            "-Wl,-rpath,@loader_path",
+            "-Wl,-rpath,@loader_path/zig-out/lib",
+            "-Wl,-rpath,@loader_path/zig-out/zig-out/lib"
           ],
           "xcode_settings": {
             "OTHER_LDFLAGS": [
-              "-Wl,-rpath,@loader_path/../../zig-out/zig-out/lib",
-              "-Wl,-rpath,@loader_path/../zig-out/zig-out/lib",
-              "-Wl,-rpath,@loader_path/"
+              "-Wl,-rpath,@loader_path",
+              "-Wl,-rpath,@loader_path/zig-out/lib",
+              "-Wl,-rpath,@loader_path/zig-out/zig-out/lib"
             ]
           }
         }],
         ['OS=="linux"', {
           "libraries": [
-            "<(module_root_dir)/zig-out/zig-out/lib/libtik-forge.node.so"
-          ],
-          "ldflags": [
-            "-Wl,-rpath,'$$ORIGIN'"
+            "-Wl,-rpath,'$$ORIGIN'",
+            "-Wl,-rpath,'$$ORIGIN/zig-out/lib'",
+            "-Wl,-rpath,'$$ORIGIN/zig-out/zig-out/lib'"
           ]
         }]
       ],

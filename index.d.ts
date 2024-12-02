@@ -1,26 +1,15 @@
 declare module 'tik-forge' {
     /**
-     * Generate PDF from HTML
-     * @param html HTML content to convert
-     * @param options PDF generation options
+     * Initialize the addon
      */
-    export function generatePDF(html: string, options?: PDFOptions): Buffer;
-
-    export interface PDFOptions {
-        password?: {
-            userPassword?: string;
-            ownerPassword?: string;
-            permissions?: {
-                printing?: boolean;
-                modifying?: boolean;
-                copying?: boolean;
-                annotating?: boolean;
-            };
-        };
-    }
+    export function init(): void;
 
     /**
-     * Initialize the module
+     * Generate PDF from HTML
+     * @param html HTML content to convert
+     * @returns Buffer containing PDF data
      */
-    export function init(): boolean;
+    export function generatePDF(html: string): Buffer;
+
+    // เพิ่ม type definitions สำหรับ functions อื่นๆ ที่มี
 } 
