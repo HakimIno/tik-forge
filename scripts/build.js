@@ -1,68 +1,59 @@
 const { execSync } = require('child_process');
-const os = require('os');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 
-console.log('Building Zig library...');
+// Map Node.js target to Zig target
+const targetMap = {
+    'darwin-x64': 'x86_64-macos',
+    'darwin-arm64': 'aarch64-macos',
+    'linux-x64': 'x86_64-linux',
+    'linux-arm64': 'aarch64-linux'
+};
 
-// Get platform-specific library extension
-const platform = os.platform();
-const libExt = platform === 'win32' ? 'dll' : platform === 'darwin' ? 'dylib' : 'so';
+// Map platform to file extension
+const extensionMap = {
+    'darwin': '.node.dylib',
+    'linux': '.node.so'
+};
 
-// Build Zig library first
+// Get current platform and architecture
+const currentPlatform = process.platform;
+const currentArch = process.env.ARCH || process.arch;
+const target = `${currentPlatform}-${currentArch}`;
+
+console.log(`Building for ${target}...`);
+
 try {
-  execSync('zig build', { stdio: 'inherit' });
-  
-  // Verify that the library was built
-  const libPath = path.join(
-    __dirname,
-    '..',
-    'zig-out',
-    'lib',
-    platform === 'win32' 
-      ? 'tik-forge.dll'
-      : `libtik-forge.${libExt}`
-  );
-  
-  if (!fs.existsSync(libPath)) {
-    throw new Error(`Library file not found at ${libPath}`);
-  }
-  
-  console.log(`Library built successfully at ${libPath}`);
+    // Convert target to Zig format
+    const zigTarget = targetMap[target];
+    if (!zigTarget) {
+        throw new Error(`Unknown target: ${target}`);
+    }
+    
+    // Get correct file extension
+    const platform = target.split('-')[0];
+    const extension = extensionMap[platform];
+    
+    // Build for target
+    execSync(`zig build -Dtarget=${zigTarget}`, { stdio: 'inherit' });
+    
+    // Check if library was built
+    const libPath = path.join(__dirname, '..', 'zig-out', 'zig-out', 'lib');
+    const libFile = path.join(libPath, `libtik-forge${extension}`);
+    
+    if (!fs.existsSync(libFile)) {
+        throw new Error(`Library not found at ${libFile}`);
+    }
+    
+    // Copy to the location node-gyp expects
+    const destPath = path.join(__dirname, '..', 'build', 'Release');
+    if (!fs.existsSync(destPath)) {
+        fs.mkdirSync(destPath, { recursive: true });
+    }
+    fs.copyFileSync(libFile, path.join(destPath, 'tik-forge.node'));
+    
+    console.log(`Built successfully for ${target}`);
 } catch (error) {
-  console.error('Zig build failed:', error);
-  process.exit(1);
+    console.error(`Build failed for ${target}: ${error.message}`);
+    process.exit(1);
 }
-
-console.log('Building node addon...');
-try {
-  // Create build directory if it doesn't exist
-  if (!fs.existsSync('build')) {
-    fs.mkdirSync('build');
-  }
-  if (!fs.existsSync('build/Release')) {
-    fs.mkdirSync('build/Release', { recursive: true });
-  }
-  
-  execSync('node-gyp rebuild', { stdio: 'inherit' });
-  
-  // Verify that the node addon was built
-  const addonPath = path.join(
-    __dirname,
-    '..',
-    'build',
-    'Release',
-    'tik-forge.node'
-  );
-  
-  if (!fs.existsSync(addonPath)) {
-    throw new Error(`Node addon not found at ${addonPath}`);
-  }
-  
-  console.log(`Node addon built successfully at ${addonPath}`);
-} catch (error) {
-  console.error('node-gyp build failed:', error);
-  process.exit(1);
-}
-
-console.log('Build completed successfully');

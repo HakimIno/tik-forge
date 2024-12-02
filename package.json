@@ -5,18 +5,19 @@
   "main": "index.js",
   "scripts": {
     "preinstall": "node scripts/get-node-info.js",
-    "install": "prebuild-install || node scripts/build.js",
-    "build": "node scripts/build.js",
-    "prebuildify": "node scripts/build.js && prebuildify --napi --strip",
-    "prebuild": "prebuildify --napi --strip -t 18.0.0 -t 20.0.0",
-    "prebuild:upload": "prebuild --upload",
-    "clean": "rm -rf build/ zig-out/ zig-cache/",
+    "install": "prebuild-install || npm run build",
+    "build:only": "node scripts/build.js",
+    "build": "npm run build:only && npm run prebuildify",
+    "prebuildify": "prebuildify --napi --strip",
+    "prebuild": "node scripts/build.js && prebuildify --napi --strip -t 18.0.0 -t 20.0.0",
+    "prebuild:upload": "prebuild --upload -t 18.0.0 -t 20.0.0",
+    "clean": "rm -rf build/ zig-out/ zig-cache/ prebuilds/",
     "postinstall": "node scripts/postinstall.js",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "mocha \"test/unit/**/*.test.js\" --timeout 10000",
     "test:integration": "mocha \"test/integration/**/*.test.js\" --timeout 10000",
     "test:coverage": "nyc mocha \"test/**/*.test.js\" --timeout 10000",
-    "debug": "NODE_DEBUG=module node --napi-modules ./index.js"
+    "test:watch": "mocha --watch \"test/**/*.test.js\" --timeout 10000"
   },
   "files": [
     "src/",
@@ -25,7 +26,9 @@
     "build.zig",
     "index.js",
     "index.d.ts",
-    "scripts/get-node-info.js"
+    "scripts/get-node-info.js",
+    "build/Release/",
+    "zig-out/lib/"
   ],
   "keywords": [
     "document",
@@ -41,7 +44,7 @@
   "dependencies": {
     "exceljs": "^4.4.0",
     "node-addon-api": "^7.0.0",
-    "node-api-headers": "^1.1.0",
+    "node-api-headers": "^1.0.0",
     "prebuild-install": "^7.1.1"
   },
   "devDependencies": {
@@ -51,8 +54,11 @@
     "prebuildify": "^5.0.1"
   },
   "binary": {
-    "module_path": "zig-out/lib",
-    "module_name": "tik-forge"
+    "module_name": "tik-forge",
+    "module_path": "prebuilds/{platform}-{arch}",
+    "host": "https://github.com/YOUR_USERNAME/tik-forge/releases/download/",
+    "remote_path": "{version}",
+    "package_name": "{module_name}-v{version}-{platform}-{arch}.tar.gz"
   },
   "repository": {
     "type": "git",
@@ -80,6 +86,6 @@
   "homepage": "https://github.com/HakimIno/tik-forge#readme",
   "engines": {
     "node": ">=18.0.0",
-    "zig": "0.13.0"
+    "zig": ">=0.13.0"
   }
 }

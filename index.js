@@ -1,8 +1,10 @@
 const path = require('path');
-const modulePath = path.join(__dirname, 'build', 'Release', 'tik-forge.node');
-const addon = require(modulePath);
 
-module.exports = {
-    init: addon.init,
-    generatePDF: addon.generatePDF,
-};
+try {
+    const addonPath = path.resolve(__dirname, 'build/Release/tik-forge.node');
+    console.log('Loading addon from:', addonPath);
+    module.exports = require(addonPath);
+} catch (err) {
+    console.error('Failed to load tik-forge native addon:', err);
+    throw err;
+}

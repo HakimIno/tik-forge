@@ -1,6 +1,6 @@
-const docGenerator = require('./build/Release/tik-forge.node');
-const fs = require('fs').promises;
 const path = require('path');
+const docGenerator = require(path.resolve(__dirname, 'build/Release/tik-forge.node'));
+const fs = require('fs').promises;
 const ExcelJS = require('exceljs');
 
 // ย้ายข้อมูลตัวอย่างมาไว้ด้านนอก

@@ -12,30 +12,25 @@
       "conditions": [
         ['OS=="win"', {
           "libraries": [
-            "-L<(module_root_dir)/zig-out/lib",
-            "-ltik-forge",
-            "<(module_root_dir)/zig-out/lib/tik-forge.dll.lib"
+            "-L<(module_root_dir)/zig-out/zig-out/lib",
+            "<(module_root_dir)/zig-out/zig-out/lib/tik-forge.dll.lib"
           ]
         }],
         ['OS=="mac"', {
           "libraries": [
-            "-L<(module_root_dir)/zig-out/lib",
-            "-ltik-forge",
-            "<(module_root_dir)/zig-out/lib/libtik-forge.dylib"
+            "<(module_root_dir)/zig-out/zig-out/lib/libtik-forge.node.dylib"
           ],
           "xcode_settings": {
             "OTHER_LDFLAGS": [
-              "-Wl,-rpath,@loader_path/../../zig-out/lib",
-              "-Wl,-rpath,@loader_path/../zig-out/lib",
+              "-Wl,-rpath,@loader_path/../../zig-out/zig-out/lib",
+              "-Wl,-rpath,@loader_path/../zig-out/zig-out/lib",
               "-Wl,-rpath,@loader_path/"
             ]
           }
         }],
         ['OS=="linux"', {
           "libraries": [
-            "-L<(module_root_dir)/zig-out/lib",
-            "-ltik-forge",
-            "<(module_root_dir)/zig-out/lib/libtik-forge.so"
+            "<(module_root_dir)/zig-out/zig-out/lib/libtik-forge.node.so"
           ],
           "ldflags": [
             "-Wl,-rpath,'$$ORIGIN'"
