@@ -5,9 +5,11 @@
   "main": "index.js",
   "scripts": {
     "preinstall": "node scripts/get-node-info.js",
-    "install": "prebuild-install --napi || node scripts/install.js",
-    "build": "zig build",
-    "prebuildify": "node scripts/prebuildify.js",
+    "install": "prebuild-install || node scripts/build.js",
+    "build": "node scripts/build.js",
+    "prebuildify": "node scripts/build.js && prebuildify --napi --strip",
+    "prebuild": "prebuildify --napi --strip -t 18.0.0 -t 20.0.0",
+    "prebuild:upload": "prebuild --upload",
     "clean": "rm -rf build/ zig-out/ zig-cache/",
     "postinstall": "node scripts/postinstall.js",
     "test": "mocha 'test/**/*.test.js' --timeout 10000",
@@ -37,16 +39,17 @@
     "multi-threading"
   ],
   "dependencies": {
-    "exceljs": "^4.4.0",
-    "node-addon-api": "^7.0.0"
+    "exceljs": "^4.4.0"
   },
   "devDependencies": {
     "chai": "^4.5.0",
     "mocha": "^10.0.0",
+    "node-addon-api": "^8.3.0",
+    "node-api-headers": "^1.4.0",
     "node-gyp": "^10.2.0",
     "nyc": "^15.1.0",
-    "prebuildify": "^5.0.1",
-    "prebuild-install": "^7.1.1"
+    "prebuild-install": "^7.1.1",
+    "prebuildify": "^5.0.1"
   },
   "binary": {
     "module_path": "zig-out/lib",

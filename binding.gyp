@@ -11,7 +11,8 @@
       ],
        "libraries": [
       "-L<(module_root_dir)/build/Release",
-      "-ltik-forge"
+      "-ltik-forge",
+       "../zig-out/lib/libtik-forge.dylib"
     ],
       "cflags!": [ "-fno-exceptions" ],
       "cflags_cc!": [ "-fno-exceptions" ],
