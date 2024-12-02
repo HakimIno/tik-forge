@@ -30,21 +30,16 @@ pub fn build(b: *std.Build) void {
     const node_info = readNodeInfo(b.allocator) catch unreachable;
     defer node_info.deinit();
 
-    // Add Node.js headers
-    lib.addIncludePath(.{ .cwd_relative = "node_modules/node-addon-api" });
-    
-    if (is_macos) {
-        if (is_arm) {
-            lib.addIncludePath(.{ .cwd_relative = "/opt/homebrew/include/node" });
-            lib.addIncludePath(.{ .cwd_relative = b.fmt("/Users/{s}/Library/Caches/node-gyp/{s}/include/node", .{
-                node_info.username, node_info.version
-            }) });
-        } else {
-            lib.addIncludePath(.{ .cwd_relative = "/usr/local/include/node" });
-            lib.addIncludePath(.{ .cwd_relative = b.fmt("/Users/{s}/Library/Caches/node-gyp/{s}/include/node", .{
-                node_info.username, node_info.version
-            }) });
-        }
+    // Add Node.js include paths
+    const node_include_paths = [_][]const u8{
+        "/opt/homebrew/include/node",
+        "/usr/local/include/node",
+        "/usr/include/node",
+        b.pathJoin(&.{ b.pathFromRoot("node_modules/node-addon-api") }),
+    };
+
+    for (node_include_paths) |path| {
+        lib.addIncludePath(.{ .path = path });
     }
 
     // Link with libc

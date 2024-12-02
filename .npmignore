@@ -4,6 +4,9 @@
 !build/Release/*.so
 !build/Release/*.dll
 
+# Include prebuilt
+!prebuilds/**
+
 # Exclude development files
 .git
 .github

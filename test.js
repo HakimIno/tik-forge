@@ -80,7 +80,7 @@ async function generateHTML(startPage, endPage) {
 }
 
 async function generateLargeReport() {
-    const TOTAL_PAGES = 300;
+    const TOTAL_PAGES = 500;
     const BATCH_SIZE = 100;
     const workbook = new ExcelJS.Workbook();
     let allHtml = '';
