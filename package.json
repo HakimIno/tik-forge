@@ -17,9 +17,12 @@
   },
   "files": [
     "src/",
-    "build.zig",
+    "scripts/",
     "binding.gyp",
-    "index.js"
+    "build.zig",
+    "index.js",
+    "index.d.ts",
+    "scripts/get-node-info.js"
   ],
   "keywords": [
     "document",
