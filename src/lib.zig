@@ -1,8 +1,10 @@
 const std = @import("std");
 const c = @cImport({
-    // แก้ path ให้ตรงกับที่อยู่จริงของไฟล์
     @cDefine("NAPI_VERSION", "8");
-    @cInclude("node_api.h");  // เปลี่ยนจาก node-api-headers/include/node_api.h เป็น node_api.h
+    @cDefine("NAPI_EXTERN", "__attribute__((weak))");
+    @cDefine("NAPI_MODULE_EXPORT", "__attribute__((visibility(\"default\")))");
+    @cInclude("node_api.h");
+    // @cInclude("napi.h");
 });
 const Child = std.process.Child;
 const Thread = std.Thread;

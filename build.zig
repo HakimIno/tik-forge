@@ -39,6 +39,7 @@ pub fn build(b: *std.Build) void {
 
     if (is_macos) {
         const sdk_path = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk";
+        
         lib.addSystemIncludePath(.{ .cwd_relative = b.pathJoin(&.{ sdk_path, "usr/include" }) });
         lib.addSystemIncludePath(.{ .cwd_relative = b.pathJoin(&.{ sdk_path, "usr/lib" }) });
         
@@ -65,9 +66,17 @@ pub fn build(b: *std.Build) void {
     lib.defineCMacro("NAPI_VERSION", "8");
     lib.defineCMacro("NODE_GYP_MODULE_NAME", "tik-forge");
 
-    // Set install step
+    // Set install step with correct output path
     const install_lib = b.addInstallArtifact(lib, .{
         .dest_dir = .{ .override = .{ .custom = "zig-out/lib" } },
     });
+
+    // กำหนดชื่อไฟล์ output ให้ตรงกับที่ script ต้องการ
+    if (is_macos) {
+        lib.out_filename = "libtik-forge.node.dylib";
+    } else if (is_linux) {
+        lib.out_filename = "libtik-forge.node.so";
+    }
+
     b.getInstallStep().dependOn(&install_lib.step);
 }

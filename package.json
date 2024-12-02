@@ -4,31 +4,30 @@
   "description": "A high-performance document processing library for Node.js, built with Zig. Provides native implementations for Excel, Word, and PDF manipulation with optimized memory usage and multi-threading capabilities.",
   "main": "index.js",
   "scripts": {
-    "preinstall": "node scripts/get-node-info.js",
-    "install": "prebuild-install || npm run build",
+    "install": "node scripts/build.js",
+    "build": "npm run clean && node scripts/build.js && prebuildify --napi --strip",
     "build:only": "node scripts/build.js",
-    "build": "npm run build:only && npm run prebuildify",
     "prebuildify": "prebuildify --napi --strip",
-    "prebuild": "node scripts/build.js && prebuildify --napi --strip -t 18.0.0 -t 20.0.0",
+    "prebuild": "node scripts/build.js",
     "prebuild:upload": "prebuild --upload -t 18.0.0 -t 20.0.0",
     "clean": "rm -rf build/ zig-out/ zig-cache/ prebuilds/",
     "postinstall": "node scripts/postinstall.js",
-    "test": "npm run test:unit && npm run test:integration",
-    "test:unit": "mocha \"test/unit/**/*.test.js\" --timeout 10000",
-    "test:integration": "mocha \"test/integration/**/*.test.js\" --timeout 10000",
-    "test:coverage": "nyc mocha \"test/**/*.test.js\" --timeout 10000",
-    "test:watch": "mocha --watch \"test/**/*.test.js\" --timeout 10000"
+    "test": "npm-run-all --parallel test:*",
+    "test:unit": "mocha \"test/unit/**/*.test.js\" --timeout 10000 --parallel",
+    "test:integration": "mocha \"test/integration/**/*.test.js\" --timeout 10000 --parallel",
+    "test:coverage": "nyc --parallel mocha \"test/**/*.test.js\" --timeout 10000",
+    "test:watch": "mocha --watch \"test/**/*.test.js\" --timeout 10000",
+    "prepublishOnly": "npm run prebuild && npm run test"
   },
   "files": [
     "src/",
-    "scripts/",
+    "scripts/build.js",
+    "scripts/postinstall.js",
     "binding.gyp",
     "build.zig",
     "index.js",
     "index.d.ts",
-    "scripts/get-node-info.js",
-    "build/Release/",
-    "zig-out/lib/"
+    "build/Release/tik-forge.node"
   ],
   "keywords": [
     "document",
@@ -51,14 +50,14 @@
     "mocha": "^10.2.0",
     "nyc": "^15.1.0",
     "chai": "^4.3.10",
-    "prebuildify": "^5.0.1"
+    "prebuildify": "^5.0.1",
+    "npm-run-all": "^4.1.5"
   },
   "binary": {
     "module_name": "tik-forge",
-    "module_path": "prebuilds/{platform}-{arch}",
-    "host": "https://github.com/YOUR_USERNAME/tik-forge/releases/download/",
-    "remote_path": "{version}",
-    "package_name": "{module_name}-v{version}-{platform}-{arch}.tar.gz"
+    "module_path": "build/Release",
+    "host": "https://github.com/YourUsername/tik-forge/releases/download/",
+    "remote_path": "{version}"
   },
   "repository": {
     "type": "git",
@@ -85,7 +84,11 @@
   },
   "homepage": "https://github.com/HakimIno/tik-forge#readme",
   "engines": {
-    "node": ">=18.0.0",
-    "zig": ">=0.13.0"
+    "node": ">=18.0.0 <21.0.0",
+    "zig": ">=0.13.0 <0.14.0"
+  },
+  "config": {
+    "cache": true,
+    "cache-min": "999999999"
   }
 }
