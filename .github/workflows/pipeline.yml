@@ -15,11 +15,7 @@ jobs:
     strategy:
       matrix:
         include:
-          # macOS ARM64 builds
-          - os: macos-latest
-            node: 16
-            architecture: arm64
-            runner: macos
+          # macOS ARM64 builds (เฉพาะ Node.js 18, 20)
           - os: macos-latest
             node: 18
             architecture: arm64
@@ -30,10 +26,6 @@ jobs:
             runner: macos
           # macOS x64 builds
           - os: macos-latest
-            node: 16
-            architecture: x64
-            runner: macos
-          - os: macos-latest
             node: 18
             architecture: x64
             runner: macos
@@ -43,43 +35,22 @@ jobs:
             runner: macos
           # Linux x64 builds
           - os: ubuntu-latest
-            node: 16
-            architecture: x64
-            runner: linux
-          - os: ubuntu-latest
             node: 18
             architecture: x64
             runner: linux
           - os: ubuntu-latest
             node: 20
             architecture: x64
-            runner: linux
-          # Linux ARM64 builds
-          - os: ubuntu-latest
-            node: 16
-            architecture: arm64
-            runner: linux
-          - os: ubuntu-latest
-            node: 18
-            architecture: arm64
-            runner: linux
-          - os: ubuntu-latest
-            node: 20
-            architecture: arm64
             runner: linux
     steps:
       - uses: actions/checkout@v2
       
-      # Linux ARM64 builds
-      - name: Set up QEMU
-        if: matrix.runner == 'linux' && matrix.architecture == 'arm64'
-        uses: docker/setup-qemu-action@v2
-        with:
-          platforms: arm64
-
-      - name: Set up Docker Buildx
-        if: matrix.runner == 'linux' && matrix.architecture == 'arm64'
-        uses: docker/setup-buildx-action@v2
+      # Install system dependencies for macOS
+      - name: Install macOS dependencies
+        if: matrix.runner == 'macos'
+        run: |
+          brew install python@3.11
+          brew link --force python@3.11
       
       - name: Setup Node.js
         uses: actions/setup-node@v2
@@ -87,36 +58,25 @@ jobs:
           node-version: ${{ matrix.node }}
           architecture: ${{ matrix.architecture }}
       
+      # Install node-gyp globally
+      - name: Install node-gyp
+        run: npm install -g node-gyp@latest
+      
       - name: Install Zig
         uses: goto-bus-stop/setup-zig@v2
         with:
           version: 0.13.0
 
-      # Build for Linux ARM64
-      - name: Build Linux ARM64
-        if: matrix.runner == 'linux' && matrix.architecture == 'arm64'
+      # Build and Test
+      - name: Build and Test
         run: |
-          docker buildx build --platform linux/arm64 \
-            --build-arg NODE_VERSION=${{ matrix.node }} \
-            -t tik-forge-builder .
-          docker run --rm --platform linux/arm64 tik-forge-builder
-
-      # Build for macOS (both ARM64 and x64)
-      - name: Build macOS
-        if: matrix.runner == 'macos'
-        run: |
+          python3 -V
           npm install
           npm run build
-      
-      # Build for Linux x64
-      - name: Build Linux x64
-        if: matrix.runner == 'linux' && matrix.architecture == 'x64'
-        run: |
-          npm install
-          npm run build
-      
-      - name: Test
-        run: npm test
+          npm test
+        env:
+          PYTHON: python3
+          npm_config_node_gyp: $(which node-gyp)
 
   deploy:
     needs: test

@@ -6,9 +6,9 @@
   "scripts": {
     "preinstall": "node scripts/get-node-info.js",
     "install": "node-gyp rebuild && zig build",
+    "build": "node-gyp rebuild && zig build",
     "clean": "rm -rf build/ zig-out/ zig-cache/",
     "prebuild": "npm run clean",
-    "build": "zig build",
     "test": "mocha test/**/*.test.js",
     "test:unit": "mocha test/unit/**/*.test.js",
     "test:integration": "mocha test/integration/**/*.test.js",
