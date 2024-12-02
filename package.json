@@ -1,6 +1,6 @@
 {
   "name": "tik-forge",
-  "version": "1.2.21",
+  "version": "1.2.22",
   "description": "A high-performance document processing library for Node.js, built with Zig. Provides native implementations for Excel, Word, and PDF manipulation with optimized memory usage and multi-threading capabilities.",
   "scripts": {
     "build": "npm run clean && node scripts/build.js",
