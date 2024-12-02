@@ -30,13 +30,42 @@ jobs:
             runner: macos
           # macOS x64 builds
           - os: macos-latest
-            node: [16, 18, 20]
+            node: 16
             architecture: x64
             runner: macos
-          # Linux builds (using Docker for ARM64)
+          - os: macos-latest
+            node: 18
+            architecture: x64
+            runner: macos
+          - os: macos-latest
+            node: 20
+            architecture: x64
+            runner: macos
+          # Linux x64 builds
           - os: ubuntu-latest
-            node: [16, 18, 20]
-            architecture: [x64, arm64]
+            node: 16
+            architecture: x64
+            runner: linux
+          - os: ubuntu-latest
+            node: 18
+            architecture: x64
+            runner: linux
+          - os: ubuntu-latest
+            node: 20
+            architecture: x64
+            runner: linux
+          # Linux ARM64 builds
+          - os: ubuntu-latest
+            node: 16
+            architecture: arm64
+            runner: linux
+          - os: ubuntu-latest
+            node: 18
+            architecture: arm64
+            runner: linux
+          - os: ubuntu-latest
+            node: 20
+            architecture: arm64
             runner: linux
     steps:
       - uses: actions/checkout@v2
