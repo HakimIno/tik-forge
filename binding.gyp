@@ -25,6 +25,8 @@
           ],
           "xcode_settings": {
             "OTHER_LDFLAGS": [
+              "-Wl,-rpath,@loader_path/../../zig-out/lib",
+              "-Wl,-rpath,@loader_path/../zig-out/lib",
               "-Wl,-rpath,@loader_path/"
             ]
           }
