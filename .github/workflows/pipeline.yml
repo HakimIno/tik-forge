@@ -91,6 +91,15 @@ jobs:
           npm_config_node_gyp: $(which node-gyp)
           NODE_OPTIONS: --max-old-space-size=4096
 
+      # Test npm installation
+      - name: Test npm install
+        run: |
+          mkdir test-install
+          cd test-install
+          npm init -y
+          npm install ..
+          node -e "require('tik-forge')"
+
       # Upload artifacts
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
@@ -107,6 +116,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      # Download all artifacts from test job
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts
+
+      # Copy artifacts to build directory
+      - name: Prepare artifacts
+        run: |
+          mkdir -p build/Release
+          find artifacts -name "*.node" -o -name "*.dylib" -o -name "*.so" -o -name "*.dll" | while read file; do
+            cp "$file" build/Release/
+          done
+      
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -115,9 +138,6 @@ jobs:
       
       - name: Install dependencies
         run: npm ci
-      
-      - name: Build
-        run: npm run build
       
       - name: Publish to NPM
         run: npm publish

@@ -1,4 +1,4 @@
-const docGenerator = require('./build/Release/tik-forge');
+const docGenerator = require('./build/Release/tik-forge.node');
 const fs = require('fs').promises;
 const path = require('path');
 const ExcelJS = require('exceljs');

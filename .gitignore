@@ -20,7 +20,7 @@ zig-out/
 *.swo
 .DS_Store
 Thumbs.db
-
+output
 # Logs
 logs/
 *.log

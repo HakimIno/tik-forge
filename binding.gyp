@@ -2,7 +2,7 @@
   "targets": [
     {
       "target_name": "tik-forge",
-      "sources": [],
+      "sources": [ "src/lib.zig" ],
       "include_dirs": [
         "<!@(node -p \"require('node-addon-api').include\")"
       ],
@@ -11,17 +11,23 @@
       ],
       "cflags!": [ "-fno-exceptions" ],
       "cflags_cc!": [ "-fno-exceptions" ],
+      "defines": [ "NAPI_DISABLE_CPP_EXCEPTIONS" ],
+      "xcode_settings": {
+        "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
+        "CLANG_CXX_LIBRARY": "libc++",
+        "MACOSX_DEPLOYMENT_TARGET": "10.15"
+      },
       "conditions": [
         ['OS=="mac"', {
+          "libraries": [
+            "-L<!(pwd)/zig-out/lib",
+            "-ltik-forge"
+          ],
           "xcode_settings": {
-            "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
-            "CLANG_CXX_LIBRARY": "libc++",
-            "MACOSX_DEPLOYMENT_TARGET": "10.15"
+            "OTHER_LDFLAGS": [
+              "-Wl,-rpath,@loader_path"
+            ]
           }
-        }],
-        ['OS=="linux"', {
-          "cflags+": [ "-fPIC" ],
-          "cflags_cc+": [ "-fPIC" ]
         }]
       ]
     }

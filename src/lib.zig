@@ -9,12 +9,8 @@ const AtomicBool = std.atomic.Value(bool);
 
 // Error set
 const GenerateError = error{
-    InitializationFailed,
-    ProcessError,
     TimeoutError,
-    FileOperationFailed,
-    BufferAllocationFailed,
-    InvalidArgument,
+    ProcessError,
 };
 
 // Output format types
@@ -452,48 +448,56 @@ var is_initialized: AtomicBool = AtomicBool.init(false);
 var generator_instance: ?*DocumentGenerator = null;
 
 // Node.js module registration
-export fn napi_register_module_v1(env: c.napi_env, exports: c.napi_value) callconv(.C) c.napi_value {
-    const allocator = std.heap.page_allocator;
-    const config = Config.init();
+export fn napi_register_module_v1(
+    env: c.napi_env,
+    exports: c.napi_value,
+) c.napi_value {
+    // Register the module functions
+    var result: c.napi_status = undefined;
     
-    generator_instance = DocumentGenerator.init(allocator, config) catch |err| {
-        var error_msg: c.napi_value = undefined;
-        _ = c.napi_create_string_utf8(env, @errorName(err), @errorName(err).len, &error_msg);
-        return error_msg;
-    };
-
-    // Export functions
-    var pdf_fn: c.napi_value = undefined;
-    _ = c.napi_create_function(env, "generatePDF", 10, generatePDFAsync, null, &pdf_fn);
-    _ = c.napi_set_named_property(env, exports, "generatePDF", pdf_fn);
-
-    var excel_fn: c.napi_value = undefined;
-    _ = c.napi_create_function(env, "generateExcel", 12, generateExcelAsync, null, &excel_fn);
-    _ = c.napi_set_named_property(env, exports, "generateExcel", excel_fn);
-
-    // Add init function
-    var init_name: c.napi_value = undefined;
-    _ = c.napi_create_string_utf8(env, "init", 4, &init_name);
-    
+    // Register init
     var init_fn: c.napi_value = undefined;
-    _ = c.napi_create_function(env, "init", 4, init, null, &init_fn);
-    
-    _ = c.napi_set_property(env, exports, init_name, init_fn);
-    
+    result = c.napi_create_function(env, "init", 4, init, null, &init_fn);
+    if (result == c.napi_ok) {
+        _ = c.napi_set_named_property(env, exports, "init", init_fn);
+    }
+
+    // Register generatePDF
+    var pdf_fn: c.napi_value = undefined;
+    result = c.napi_create_function(env, "generatePDF", 10, generatePDF, null, &pdf_fn);
+    if (result == c.napi_ok) {
+        _ = c.napi_set_named_property(env, exports, "generatePDF", pdf_fn);
+    }
+
+    // Register generateExcel
+    var excel_fn: c.napi_value = undefined;
+    result = c.napi_create_function(env, "generateExcel", 12, generateExcel, null, &excel_fn);
+    if (result == c.napi_ok) {
+        _ = c.napi_set_named_property(env, exports, "generateExcel", excel_fn);
+    }
+
+    // Register cleanup
+    var cleanup_fn: c.napi_value = undefined;
+    result = c.napi_create_function(env, "cleanup", 7, cleanup, null, &cleanup_fn);
+    if (result == c.napi_ok) {
+        _ = c.napi_set_named_property(env, exports, "cleanup", cleanup_fn);
+    }
+
     return exports;
 }
 
-// Required for Node.js
-pub export const napi_register_module_v1_name = "__napi_register_module_v1";
-
-// Cleanup function
-export fn cleanup() void {
+// Change the cleanup function signature to mark unused parameters
+export fn cleanup(
+    _: c.napi_env,
+    _: c.napi_callback_info,
+) c.napi_value {
     if (generator_instance) |gen| {
         gen.deinit();
         generator_instance = null;
         GeneratorStorage.set(null);
         is_initialized.store(false, .seq_cst);
     }
+    return null;
 }
 
 // Async function handlers
@@ -642,48 +646,81 @@ export fn generatePDF(env: c.napi_env, info: c.napi_callback_info) c.napi_value 
 
 // แก้ไข generateExcel function
 export fn generateExcel(env: c.napi_env, info: c.napi_callback_info) c.napi_value {
-    if (!is_initialized.load(.seq_cst)) {
+     if (!is_initialized.load(.seq_cst)) {
+        const err = createError(env, "Generator not initialized");
+        _ = c.napi_throw(env, err);
         return null;
     }
 
-    if (generator_instance) |gen| {
-        // Get input string from JavaScript
-        var argc: usize = 1;
-        var args: [1]c.napi_value = undefined;
-        if (c.napi_get_cb_info(env, info, &argc, &args, null, null) != c.napi_ok) {
-            return null;
-        }
-
-        // Get string length
-        var str_len: usize = undefined;
-        if (c.napi_get_value_string_utf8(env, args[0], null, 0, &str_len) != c.napi_ok) {
-            return null;
-        }
-
-        // Allocate buffer and get string content
-        const input = gen.allocator.alloc(u8, str_len + 1) catch {
-            return null;
-        };
-        defer gen.allocator.free(input);
-
-        if (c.napi_get_value_string_utf8(env, args[0], input.ptr, str_len + 1, null) != c.napi_ok) {
-            return null;
-        }
-
-        // Generate document
-        const result = gen.generateDocument(.Excel, input[0..str_len]) catch {
-            return null;
-        };
-        defer gen.allocator.free(result);
-
-        // Create Node.js Buffer from result
-        var buffer: c.napi_value = undefined;
-        if (c.napi_create_buffer_copy(env, result.len, result.ptr, null, &buffer) != c.napi_ok) {
-            return null;
-        }
-
-        return buffer;
+    var argc: usize = 1;
+    var args: [1]c.napi_value = undefined;
+    if (c.napi_get_cb_info(env, info, &argc, &args, null, null) != c.napi_ok) {
+        const err = createError(env, "Failed to parse arguments");
+        _ = c.napi_throw(env, err);
+        return null;
     }
+
+    // ตรวจสอบ input
+    var str_len: usize = undefined;
+    if (c.napi_get_value_string_utf8(env, args[0], null, 0, &str_len) != c.napi_ok) {
+        const err = createError(env, "Invalid input");
+        _ = c.napi_throw(env, err);
+        return null;
+    }
+
+    if (str_len == 0) {
+        const err = createError(env, "Empty input");
+        _ = c.napi_throw(env, err);
+        return null;
+    }
+
+    // แปลง input เป็น string
+    const input = generator_instance.?.allocator.alloc(u8, str_len + 1) catch {
+        const err = createError(env, "Memory allocation failed");
+        _ = c.napi_throw(env, err);
+        return null;
+    };
+    defer generator_instance.?.allocator.free(input);
+
+    if (c.napi_get_value_string_utf8(env, args[0], input.ptr, str_len + 1, null) != c.napi_ok) {
+        const err = createError(env, "Failed to get input string");
+        _ = c.napi_throw(env, err);
+        return null;
+    }
+
+    // สร้าง Excel
+    const result = generator_instance.?.generateDocument(.Excel, input[0..str_len]) catch |err| {
+        const error_msg = switch (err) {
+            GenerateError.ProcessError => "Process error",
+            GenerateError.TimeoutError => "Timeout error",
+            else => "Unknown error",
+        };
+        const error_obj = createError(env, error_msg);
+        _ = c.napi_throw(env, error_obj);
+        return null;
+    };
+    defer generator_instance.?.allocator.free(result);
+
+    // สร้าง Buffer
+    var buffer: c.napi_value = undefined;
+    if (c.napi_create_buffer_copy(env, result.len, result.ptr, null, &buffer) != c.napi_ok) {
+        const err = createError(env, "Failed to create buffer");
+        _ = c.napi_throw(env, err);
+        return null;
+    }
+
+    return buffer;
+}
+
+fn createError(env: c.napi_env, message: []const u8) c.napi_value {
+    var msg_value: c.napi_value = undefined;
+    var result: c.napi_value = undefined;
     
-    return null;
+    // สร้าง napi_value สำหรับข้อความ error
+    _ = c.napi_create_string_utf8(env, message.ptr, message.len, &msg_value);
+    
+    // สร้าง error object
+    _ = c.napi_create_error(env, null, msg_value, &result);
+    
+    return result;
 }

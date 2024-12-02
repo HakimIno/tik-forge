@@ -1,0 +1,13 @@
+# Include these files
+!build/Release/*.node
+!build/Release/*.dylib
+!build/Release/*.so
+!build/Release/*.dll
+
+# Exclude development files
+.git
+.github
+node_modules
+test
+*.test.js
+.gitignore 

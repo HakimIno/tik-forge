@@ -2,7 +2,6 @@ const std = @import("std");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
 
     const target_info = target.result;
     const is_windows = target_info.os.tag == .windows;
@@ -19,12 +18,12 @@ pub fn build(b: *std.Build) void {
         @panic("Unsupported operating system. Only Windows, macOS, and Linux are supported.");
     }
 
+    // Create the library
     const lib = b.addSharedLibrary(.{
         .name = "tik-forge",
         .root_source_file = .{ .cwd_relative = "src/lib.zig" },
         .target = target,
-        .optimize = optimize,
-        .pic = true,
+        .optimize = .Debug,
     });
 
     // Read node info from file
@@ -34,27 +33,18 @@ pub fn build(b: *std.Build) void {
     // Add Node.js headers
     lib.addIncludePath(.{ .cwd_relative = "node_modules/node-addon-api" });
     
-    // Add platform-specific Node.js headers
     if (is_macos) {
         if (is_arm) {
-            // ARM Mac paths
             lib.addIncludePath(.{ .cwd_relative = "/opt/homebrew/include/node" });
             lib.addIncludePath(.{ .cwd_relative = b.fmt("/Users/{s}/Library/Caches/node-gyp/{s}/include/node", .{
                 node_info.username, node_info.version
             }) });
         } else {
-            // Intel Mac paths
             lib.addIncludePath(.{ .cwd_relative = "/usr/local/include/node" });
             lib.addIncludePath(.{ .cwd_relative = b.fmt("/Users/{s}/Library/Caches/node-gyp/{s}/include/node", .{
                 node_info.username, node_info.version
             }) });
         }
-    } else if (is_linux) {
-        // Linux paths
-        lib.addIncludePath(.{ .cwd_relative = "/usr/include/node" });
-        lib.addIncludePath(.{ .cwd_relative = b.fmt("/home/{s}/.cache/node-gyp/{s}/include/node", .{
-            node_info.username, node_info.version
-        }) });
     }
 
     // Link with libc
@@ -63,13 +53,46 @@ pub fn build(b: *std.Build) void {
     // Platform-specific settings
     if (is_macos) {
         lib.linker_allow_shlib_undefined = true;
-        if (is_arm) {
-            lib.addRPath(.{ .cwd_relative = "/opt/homebrew/lib" });
-        }
+        lib.install_name = "@loader_path/libtik-forge.dylib";
+        
+        // Add SDK paths
+        lib.addSystemIncludePath(.{ .cwd_relative = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include" });
+        lib.addLibraryPath(.{ .cwd_relative = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/lib" });
     }
 
-    const install_lib = b.addInstallArtifact(lib, .{});
-    b.getInstallStep().dependOn(&install_lib.step);
+    // Create install step
+    const install_step = b.addInstallArtifact(lib, .{});
+
+    // Create the build/Release directory
+    const mkdir_step = b.addSystemCommand(&.{
+        "mkdir", "-p", "build/Release",
+    });
+
+    // Wait for install to complete
+    mkdir_step.step.dependOn(&install_step.step);
+
+    // Run node-gyp rebuild first
+    const node_gyp_step = b.addSystemCommand(&.{
+        "node-gyp", "rebuild",
+    });
+
+    // Wait for mkdir to complete
+    node_gyp_step.step.dependOn(&mkdir_step.step);
+
+    // Copy the library to build/Release after node-gyp
+    const copy_step = b.addSystemCommand(&.{
+        "sh",
+        "-c",
+        \\cp -f zig-out/lib/libtik-forge.dylib build/Release/ && \
+        \\chmod 755 build/Release/libtik-forge.dylib && \
+        \\ls -la build/Release/
+    });
+
+    // Wait for node-gyp to complete
+    copy_step.step.dependOn(&node_gyp_step.step);
+
+    // Make copy step the default
+    b.getInstallStep().dependOn(&copy_step.step);
 }
 
 const NodeInfo = struct {
