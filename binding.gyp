@@ -9,6 +9,10 @@
       "dependencies": [
         "<!(node -p \"require('node-addon-api').gyp\")"
       ],
+       "libraries": [
+      "-L<(module_root_dir)/build/Release",
+      "-ltik-forge"
+    ],
       "cflags!": [ "-fno-exceptions" ],
       "cflags_cc!": [ "-fno-exceptions" ],
       "defines": [ "NAPI_DISABLE_CPP_EXCEPTIONS" ],
@@ -25,7 +29,7 @@
           ],
           "xcode_settings": {
             "OTHER_LDFLAGS": [
-              "-Wl,-rpath,@loader_path"
+              "-Wl,-rpath,@loader_path/"
             ]
           }
         }]

@@ -5,11 +5,11 @@
   "main": "index.js",
   "scripts": {
     "preinstall": "node scripts/get-node-info.js",
-    "install": "node-gyp rebuild || (prebuild-install || node scripts/postinstall.js)",
+    "install": "prebuild-install || npm run build",
     "postinstall": "node scripts/postinstall.js",
     "build": "zig build && node-gyp rebuild",
     "clean": "rm -rf build/ zig-out/ zig-cache/",
-    "prebuild": "prebuildify --napi --strip",
+    "prebuildify": "prebuildify --napi",
     "test": "mocha 'test/**/*.test.js' --timeout 10000",
     "test:unit": "mocha 'test/unit/**/*.test.js'",
     "test:integration": "mocha 'test/integration/**/*.test.js'",
@@ -38,13 +38,15 @@
   ],
   "dependencies": {
     "exceljs": "^4.4.0",
-    "node-addon-api": "^7.1.1"
+    "node-addon-api": "^7.0.0"
   },
   "devDependencies": {
     "chai": "^4.5.0",
     "mocha": "^10.0.0",
     "node-gyp": "^10.2.0",
-    "nyc": "^15.1.0"
+    "nyc": "^15.1.0",
+    "prebuildify": "^5.0.1",
+    "prebuild-install": "^7.1.1"
   },
   "binary": {
     "module_path": "zig-out/lib",

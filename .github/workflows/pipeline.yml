@@ -69,6 +69,7 @@ jobs:
           node-version: ${{ matrix.node }}
           architecture: ${{ matrix.architecture }}
           cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
       
       # Install node-gyp globally
       - name: Install node-gyp
