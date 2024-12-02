@@ -5,11 +5,11 @@
   "main": "index.js",
   "scripts": {
     "preinstall": "node scripts/get-node-info.js",
-    "install": "prebuild-install || npm run build",
-    "postinstall": "node scripts/postinstall.js",
-    "build": "zig build && node-gyp rebuild",
+    "install": "prebuild-install --napi || node scripts/install.js",
+    "build": "zig build",
+    "prebuildify": "node scripts/prebuildify.js",
     "clean": "rm -rf build/ zig-out/ zig-cache/",
-    "prebuildify": "prebuildify --napi",
+    "postinstall": "node scripts/postinstall.js",
     "test": "mocha 'test/**/*.test.js' --timeout 10000",
     "test:unit": "mocha 'test/unit/**/*.test.js'",
     "test:integration": "mocha 'test/integration/**/*.test.js'",
@@ -75,5 +75,9 @@
   "bugs": {
     "url": "https://github.com/HakimIno/tik-forge/issues"
   },
-  "homepage": "https://github.com/HakimIno/tik-forge#readme"
+  "homepage": "https://github.com/HakimIno/tik-forge#readme",
+  "engines": {
+    "node": ">=18.0.0",
+    "zig": "0.13.0"
+  }
 }

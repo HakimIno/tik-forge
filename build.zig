@@ -30,30 +30,39 @@ pub fn build(b: *std.Build) void {
     const node_info = readNodeInfo(b.allocator) catch unreachable;
     defer node_info.deinit();
 
-    // Add Node.js include paths
-    const node_include_paths = [_][]const u8{
-        "/opt/homebrew/include/node",
-        "/usr/local/include/node",
-        "/usr/include/node",
-        b.pathJoin(&.{ b.pathFromRoot("node_modules/node-addon-api") }),
-    };
+    // Get Node.js headers path from node-gyp cache
+    const home_dir = std.process.getEnvVarOwned(b.allocator, "HOME") catch "/Users/weerachit";
+    const node_version = std.process.getEnvVarOwned(b.allocator, "NODE_VERSION") catch "20.18.1";
+    const node_headers = b.pathJoin(&.{ home_dir, "Library/Caches/node-gyp", node_version, "include/node" });
 
-    for (node_include_paths) |path| {
-        lib.addIncludePath(.{ .path = path });
+    // Add only necessary include paths
+    lib.addSystemIncludePath(.{ .cwd_relative = node_headers });  // node-gyp headers
+    lib.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ b.pathFromRoot("node_modules/node-addon-api") }) });  // node-addon-api
+
+    // Add macOS SDK paths
+    if (is_macos) {
+        const sdk_path = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk";
+        lib.addSystemIncludePath(.{ .cwd_relative = b.pathJoin(&.{ sdk_path, "usr/include" }) });
+        lib.addLibraryPath(.{ .cwd_relative = b.pathJoin(&.{ sdk_path, "usr/lib" }) });
+        
+        // Add Node.js headers path
+        lib.addSystemIncludePath(.{ .cwd_relative = b.pathJoin(&.{ home_dir, "Library/Caches/node-gyp", node_version, "include/node" }) });
+        
+        // Instead of linking with node library, we'll define the required Node-API symbols as weak
+        lib.defineCMacro("NAPI_EXTERN", "__attribute__((weak))");
+        lib.defineCMacro("NAPI_MODULE_EXPORT", "__attribute__((visibility(\"default\")))");
+        
+        // Add required frameworks for macOS
+        lib.linkFramework("CoreFoundation");
+        lib.linkFramework("CoreServices");
+        
+        // Set dynamic linking options
+        lib.linker_allow_shlib_undefined = true;
+        lib.bundle_compiler_rt = true;
     }
 
     // Link with libc
     lib.linkLibC();
-
-    // Platform-specific settings
-    if (is_macos) {
-        lib.linker_allow_shlib_undefined = true;
-        lib.install_name = "@loader_path/libtik-forge.dylib";
-        
-        // Add SDK paths
-        lib.addSystemIncludePath(.{ .cwd_relative = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include" });
-        lib.addLibraryPath(.{ .cwd_relative = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/lib" });
-    }
 
     // Create install step
     const install_step = b.addInstallArtifact(lib, .{});
