@@ -37,6 +37,9 @@ pub fn build(b: *std.Build) void {
         lib.addIncludePath(.{ .cwd_relative = path });
     }
 
+    lib.addIncludePath(.{ .cwd_relative = "node_modules/node-api-headers/include" });
+    lib.addIncludePath(.{ .cwd_relative = "node_modules/node-addon-api" });
+
     if (is_macos) {
         const sdk_path = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk";
         
