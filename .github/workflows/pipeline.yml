@@ -14,22 +14,42 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        node: [16, 18, 20]
-        architecture: [x64, arm64]
-        exclude:
-          - os: windows-latest
+        include:
+          # macOS ARM64 builds
+          - os: macos-latest
+            node: 16
+            architecture: arm64
+            runner: macos
+          - os: macos-latest
+            node: 18
+            architecture: arm64
+            runner: macos
+          - os: macos-latest
+            node: 20
+            architecture: arm64
+            runner: macos
+          # macOS x64 builds
+          - os: macos-latest
+            node: [16, 18, 20]
+            architecture: x64
+            runner: macos
+          # Linux builds (using Docker for ARM64)
+          - os: ubuntu-latest
+            node: [16, 18, 20]
+            architecture: [x64, arm64]
+            runner: linux
     steps:
       - uses: actions/checkout@v2
       
+      # Linux ARM64 builds
       - name: Set up QEMU
-        if: matrix.architecture == 'arm64'
+        if: matrix.runner == 'linux' && matrix.architecture == 'arm64'
         uses: docker/setup-qemu-action@v2
         with:
           platforms: arm64
-      
+
       - name: Set up Docker Buildx
-        if: matrix.architecture == 'arm64'
+        if: matrix.runner == 'linux' && matrix.architecture == 'arm64'
         uses: docker/setup-buildx-action@v2
       
       - name: Setup Node.js
@@ -42,17 +62,26 @@ jobs:
         uses: goto-bus-stop/setup-zig@v2
         with:
           version: 0.13.0
-      
-      - name: Build ARM64
-        if: matrix.architecture == 'arm64'
+
+      # Build for Linux ARM64
+      - name: Build Linux ARM64
+        if: matrix.runner == 'linux' && matrix.architecture == 'arm64'
         run: |
           docker buildx build --platform linux/arm64 \
             --build-arg NODE_VERSION=${{ matrix.node }} \
             -t tik-forge-builder .
           docker run --rm --platform linux/arm64 tik-forge-builder
+
+      # Build for macOS (both ARM64 and x64)
+      - name: Build macOS
+        if: matrix.runner == 'macos'
+        run: |
+          npm install
+          npm run build
       
-      - name: Build x64
-        if: matrix.architecture == 'x64'
+      # Build for Linux x64
+      - name: Build Linux x64
+        if: matrix.runner == 'linux' && matrix.architecture == 'x64'
         run: |
           npm install
           npm run build
@@ -67,36 +96,19 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      
       - name: Setup Node.js
         uses: actions/setup-node@v2
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
       
-      - name: Build Multi-arch
-        run: |
-          npm ci
-          npm run build
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build
+        run: npm run build
       
       - name: Publish to NPM
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            dist/*
-            LICENSE
-            README.md
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
