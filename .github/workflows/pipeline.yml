@@ -10,9 +10,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest]
         node: [18, 20]
-    
+        arch: [x64]
+        include:
+          - os: macos-latest
+            node: 18
+            arch: arm64
+          - os: macos-latest
+            node: 20
+            arch: arm64
         
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -24,6 +31,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
+          architecture: ${{ matrix.arch }}
           
       - name: Install Zig
         uses: goto-bus-stop/setup-zig@v2
@@ -54,9 +62,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest]
         node: [18, 20]
-       
+        arch: [x64]
+        include:
+          - os: macos-latest
+            node: 18
+            arch: arm64
+          - os: macos-latest
+            node: 20
+            arch: arm64
         
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -68,6 +83,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
+          architecture: ${{ matrix.arch }}
           
       - name: Install Zig
         uses: goto-bus-stop/setup-zig@v2
@@ -81,13 +97,13 @@ jobs:
         run: npm run prebuildify
         
       - name: Package prebuilds
-        run: tar -czf prebuilds-${{ matrix.os }}-node${{ matrix.node }}.tar.gz prebuilds/
+        run: tar -czf prebuilds-${{ matrix.os }}-${{ matrix.arch }}-node${{ matrix.node }}.tar.gz prebuilds/
         
       - name: Create Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: prebuilds-${{ matrix.os }}-node${{ matrix.node }}.tar.gz
+          files: prebuilds-${{ matrix.os }}-${{ matrix.arch }}-node${{ matrix.node }}.tar.gz
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           prerelease: false
@@ -95,7 +111,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: prebuilds-${{ matrix.os }}-node${{ matrix.node }}
+          name: prebuilds-${{ matrix.os }}-${{ matrix.arch }}-node${{ matrix.node }}
           path: prebuilds/
 
   publish:

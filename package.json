@@ -12,10 +12,10 @@
     "prebuild:upload": "prebuild --upload",
     "clean": "rm -rf build/ zig-out/ zig-cache/",
     "postinstall": "node scripts/postinstall.js",
-    "test": "mocha 'test/**/*.test.js' --timeout 10000",
-    "test:unit": "mocha 'test/unit/**/*.test.js'",
-    "test:integration": "mocha 'test/integration/**/*.test.js'",
-    "test:coverage": "nyc mocha 'test/**/*.test.js'",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "mocha \"test/unit/**/*.test.js\" --timeout 10000",
+    "test:integration": "mocha \"test/integration/**/*.test.js\" --timeout 10000",
+    "test:coverage": "nyc mocha \"test/**/*.test.js\" --timeout 10000",
     "debug": "NODE_DEBUG=module node --napi-modules ./index.js"
   },
   "files": [
