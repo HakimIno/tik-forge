@@ -34,110 +34,42 @@ pub fn build(b: *std.Build) void {
     // Add Node.js headers
     lib.addIncludePath(.{ .cwd_relative = "node_modules/node-addon-api" });
     
-    // Add platform-specific Node.js headers using node_info
+    // Add platform-specific Node.js headers
     if (is_macos) {
         if (is_arm) {
-            // Path สำหรับ ARM Mac
-            const include_path = b.fmt("/opt/homebrew/lib/node_modules/npm/node_modules/node-gyp/include/node", .{});
-            lib.addIncludePath(.{ .cwd_relative = include_path });
-            lib.linker_allow_shlib_undefined = true;
-            lib.addRPath(.{ .cwd_relative = "/opt/homebrew/lib" });
-        } else {
-            // Path สำหรับ Intel Mac
-            const include_path = b.fmt("/Users/{s}/Library/Caches/node-gyp/{s}/include/node", .{
+            // ARM Mac paths
+            lib.addIncludePath(.{ .cwd_relative = "/opt/homebrew/include/node" });
+            lib.addIncludePath(.{ .cwd_relative = b.fmt("/Users/{s}/Library/Caches/node-gyp/{s}/include/node", .{
                 node_info.username, node_info.version
-            });
-            lib.addIncludePath(.{ .cwd_relative = include_path });
+            }) });
+        } else {
+            // Intel Mac paths
+            lib.addIncludePath(.{ .cwd_relative = "/usr/local/include/node" });
+            lib.addIncludePath(.{ .cwd_relative = b.fmt("/Users/{s}/Library/Caches/node-gyp/{s}/include/node", .{
+                node_info.username, node_info.version
+            }) });
         }
-    } else if (is_windows) {
-        const include_path = b.fmt("C:/Users/{s}/AppData/Local/node-gyp/Cache/{s}/include/node", .{
+    } else if (is_linux) {
+        // Linux paths
+        lib.addIncludePath(.{ .cwd_relative = "/usr/include/node" });
+        lib.addIncludePath(.{ .cwd_relative = b.fmt("/home/{s}/.cache/node-gyp/{s}/include/node", .{
             node_info.username, node_info.version
-        });
-        lib.addIncludePath(.{ .cwd_relative = include_path });
-    } else {
-        // Linux
-        const include_path = b.fmt("/home/{s}/.cache/node-gyp/{s}/include/node", .{
-            node_info.username, node_info.version
-        });
-        lib.addIncludePath(.{ .cwd_relative = include_path });
+        }) });
     }
-
-    // Add system headers and C library
-    lib.linkLibC();
-
-    // Platform-specific linker settings
-    if (is_macos and is_arm) {
-        // ARM Mac specific settings
-        lib.linker_allow_shlib_undefined = true;
-    } else if (is_windows) {
-        lib.linkSystemLibrary("node");
-    } else {
-        lib.linker_allow_shlib_undefined = true;
-    }
-
-    // Optimization settings
-    switch (optimize) {
-        .Debug => {
-            lib.bundle_compiler_rt = true;
-        },
-        .ReleaseSafe, .ReleaseFast, .ReleaseSmall => {
-            lib.bundle_compiler_rt = false;
-        },
-    }
-
-    const install_lib = b.addInstallArtifact(lib, .{});
-
-    const copy_step = if (is_windows) blk: {
-        break :blk b.addSystemCommand(&.{
-            "cmd.exe", "/C",
-            "mkdir build\\Release 2>NUL & copy zig-out\\lib\\tik-forge.dll build\\Release\\tik-forge.node",
-        });
-    } else if (is_macos) blk: {
-        break :blk b.addSystemCommand(&.{
-            "/bin/sh", "-c",
-            "mkdir -p build/Release && cp zig-out/lib/libtik-forge.dylib build/Release/tik-forge.node",
-        });
-    } else blk: {
-        break :blk b.addSystemCommand(&.{
-            "/bin/sh", "-c",
-            "mkdir -p build/Release && cp zig-out/lib/libtik-forge.so build/Release/tik-forge.node",
-        });
-    };
-
-    // Add dependencies
-    copy_step.step.dependOn(&install_lib.step);
-    b.default_step.dependOn(&copy_step.step);
-
-    // Add test step
-    const main_tests = b.addTest(.{
-        .root_source_file = .{ .cwd_relative = "src/lib.zig" },
-        .target = target,
-        .optimize = optimize,
-    });
-
-    const run_main_tests = b.addRunArtifact(main_tests);
-    const test_step = b.step("test", "Run library tests");
-    test_step.dependOn(&run_main_tests.step);
-
-    // Add Node.js headers
-    // lib.addIncludePath(.{ .cwd_relative = "/Users/weerachit/Library/Caches/node-gyp/20.18.1/include" });
-    // lib.addIncludePath(.{ .cwd_relative = "node_modules/node-addon-api" });
-    // lib.addIncludePath(.{ .cwd_relative = "node_modules/node-addon-api/src" });
 
     // Link with libc
     lib.linkLibC();
 
-    // Set as C ABI
-    lib.linkage = .dynamic;
-    lib.bundle_compiler_rt = true;
+    // Platform-specific settings
+    if (is_macos) {
+        lib.linker_allow_shlib_undefined = true;
+        if (is_arm) {
+            lib.addRPath(.{ .cwd_relative = "/opt/homebrew/lib" });
+        }
+    }
 
-    // Set install directory to build/Release
-    const install_step = b.addInstallArtifact(lib, .{
-        .dest_dir = .{ .override = .{ .custom = "build/Release" } },
-    });
-
-    // Make install the default step
-    b.getInstallStep().dependOn(&install_step.step);
+    const install_lib = b.addInstallArtifact(lib, .{});
+    b.getInstallStep().dependOn(&install_lib.step);
 }
 
 const NodeInfo = struct {
