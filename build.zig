@@ -80,7 +80,7 @@ pub fn build(b: *std.Build) void {
     // Wait for install to complete
     mkdir_step.step.dependOn(&install_step.step);
 
-    // Copy the library to build/Release
+    // Copy the library to build/Release with correct extension
     const copy_cmd = if (is_windows)
         &[_][]const u8{ "copy", "zig-out\\lib\\tik-forge.dll", "build\\Release\\" }
     else if (is_macos)

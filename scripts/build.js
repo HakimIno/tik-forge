@@ -1,39 +1,68 @@
 const { execSync } = require('child_process');
-const fs = require('fs');
+const os = require('os');
 const path = require('path');
+const fs = require('fs');
 
-async function main() {
-    try {
-        // Set environment variables
-        const env = {
-            ...process.env,
-            NODE_VERSION: process.version.slice(1),  // Remove 'v' prefix
-            HOME: require('os').homedir()
-        };
+console.log('Building Zig library...');
 
-        // Build Zig library
-        console.log('Building Zig library...');
-        execSync('zig build', { 
-            stdio: 'inherit',
-            env: env
-        });
+// Get platform-specific library extension
+const platform = os.platform();
+const libExt = platform === 'win32' ? 'dll' : platform === 'darwin' ? 'dylib' : 'so';
 
-        // Create build/Release directory if it doesn't exist
-        const releaseDir = path.join(__dirname, '..', 'build', 'Release');
-        fs.mkdirSync(releaseDir, { recursive: true });
-
-        // Build node addon
-        console.log('Building node addon...');
-        execSync('node-gyp rebuild', { 
-            stdio: 'inherit',
-            env: env
-        });
-
-        console.log('Build completed successfully');
-    } catch (e) {
-        console.error('Build failed:', e.message);
-        process.exit(1);
-    }
+// Build Zig library first
+try {
+  execSync('zig build', { stdio: 'inherit' });
+  
+  // Verify that the library was built
+  const libPath = path.join(
+    __dirname,
+    '..',
+    'zig-out',
+    'lib',
+    platform === 'win32' 
+      ? 'tik-forge.dll'
+      : `libtik-forge.${libExt}`
+  );
+  
+  if (!fs.existsSync(libPath)) {
+    throw new Error(`Library file not found at ${libPath}`);
+  }
+  
+  console.log(`Library built successfully at ${libPath}`);
+} catch (error) {
+  console.error('Zig build failed:', error);
+  process.exit(1);
 }
 
-main();
+console.log('Building node addon...');
+try {
+  // Create build directory if it doesn't exist
+  if (!fs.existsSync('build')) {
+    fs.mkdirSync('build');
+  }
+  if (!fs.existsSync('build/Release')) {
+    fs.mkdirSync('build/Release', { recursive: true });
+  }
+  
+  execSync('node-gyp rebuild', { stdio: 'inherit' });
+  
+  // Verify that the node addon was built
+  const addonPath = path.join(
+    __dirname,
+    '..',
+    'build',
+    'Release',
+    'tik-forge.node'
+  );
+  
+  if (!fs.existsSync(addonPath)) {
+    throw new Error(`Node addon not found at ${addonPath}`);
+  }
+  
+  console.log(`Node addon built successfully at ${addonPath}`);
+} catch (error) {
+  console.error('node-gyp build failed:', error);
+  process.exit(1);
+}
+
+console.log('Build completed successfully');

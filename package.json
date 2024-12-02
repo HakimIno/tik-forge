@@ -15,7 +15,7 @@
     "test": "mocha 'test/**/*.test.js' --timeout 10000",
     "test:unit": "mocha 'test/unit/**/*.test.js'",
     "test:integration": "mocha 'test/integration/**/*.test.js'",
-    "test:coverage": "nyc mocha test/**/*.test.js",
+    "test:coverage": "nyc mocha 'test/**/*.test.js'",
     "debug": "NODE_DEBUG=module node --napi-modules ./index.js"
   },
   "files": [
