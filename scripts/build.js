@@ -55,8 +55,8 @@ execSync('ls -R zig-out/', { stdio: 'inherit' });
 
 // ตรวจสอบและ copy ไฟล์
 const possibleSourcePaths = [
-    path.join(__dirname, '..', 'zig-out', 'lib', `libtik-forge.node${libExtension}`),
     path.join(__dirname, '..', 'zig-out', 'zig-out', 'lib', `libtik-forge.node${libExtension}`),
+    path.join(__dirname, '..', 'zig-out', 'lib', `libtik-forge.node${libExtension}`),
     path.join(__dirname, '..', 'zig-out', `libtik-forge.node${libExtension}`),
     path.join(__dirname, '..', 'zig-out', `tik-forge.node${libExtension}`)
 ];
@@ -75,10 +75,11 @@ if (!sourceFile) {
     console.error('Searched in paths:');
     possibleSourcePaths.forEach(p => console.error(`- ${p}`));
     
-    // แสดงรายการไฟล์ทั้งหมดใน zig-out
+    // แสดงรายการไฟล์ทั่มีอยู่จริง
     console.error('\nActual files in zig-out:');
     try {
-        execSync('find zig-out -type f', { stdio: 'inherit' });
+        const files = execSync('find zig-out -type f', { encoding: 'utf8' });
+        console.error(files);
     } catch (e) {
         console.error('Error listing files:', e);
     }

@@ -75,7 +75,7 @@ pub fn build(b: *std.Build) void {
     if (is_macos) {
         lib.out_filename = "libtik-forge.node.dylib";
     } else if (is_linux) {
-        lib.out_filename = "libtik-forge.node.so";
+        lib.out_filename = "tik-forge.node.so";
     }
 
     b.getInstallStep().dependOn(&install_lib.step);

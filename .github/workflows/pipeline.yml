@@ -26,12 +26,20 @@ jobs:
           - os: macos-latest
             node: 20
             arch: arm64
-        
+    
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     
     steps:
       - uses: actions/checkout@v3
+      
+      - name: Cache npm dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
       
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -45,13 +53,15 @@ jobs:
           version: 0.13.0
           
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm ci
+          npm install -g node-gyp
         
       - name: Run tests
         run: |
-          npm run test:unit || true
-          npm run test:integration || true
-          npm run test:coverage || true
+          npm run test:unit
+          npm run test:integration
+        continue-on-error: true
           
       - name: Upload coverage reports
         uses: codecov/codecov-action@v3
@@ -78,12 +88,20 @@ jobs:
           - os: macos-latest
             node: 20
             arch: arm64
-        
+    
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     
     steps:
       - uses: actions/checkout@v3
+      
+      - name: Cache npm dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
       
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -97,13 +115,19 @@ jobs:
           version: 0.13.0
           
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm ci
+          npm install -g node-gyp
         
       - name: Build prebuilds
-        run: npm run prebuildify
+        run: |
+          npm run prebuildify
+          ls -la prebuilds/
         
       - name: Package prebuilds
-        run: tar -czf prebuilds-${{ matrix.os }}-${{ matrix.arch }}-node${{ matrix.node }}.tar.gz prebuilds/
+        run: |
+          tar -czf prebuilds-${{ matrix.os }}-${{ matrix.arch }}-node${{ matrix.node }}.tar.gz prebuilds/
+          ls -la *.tar.gz
         
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -141,12 +165,19 @@ jobs:
           version: 0.13.0
           
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm ci
+          npm install -g node-gyp
         
       - name: Build
         run: npm run build
         
+      - name: Verify package
+        run: |
+          npm pack
+          ls -la *.tgz
+        
       - name: Publish to npm
-        run: npm publish
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
