@@ -1,0 +1,92 @@
+const { expect } = require('chai');
+const fs = require('fs').promises;
+const path = require('path');
+const ExcelJS = require('exceljs');
+
+describe('Report Generation Integration Tests', () => {
+    const outputDir = path.join(process.cwd(), 'test', 'output');
+    
+    before(async () => {
+        await fs.mkdir(outputDir, { recursive: true });
+    });
+
+    after(async () => {
+        // Cleanup test files
+        const files = await fs.readdir(outputDir);
+        for (const file of files) {
+            await fs.unlink(path.join(outputDir, file));
+        }
+    });
+
+    describe('Full Report Generation', () => {
+        it('should generate both PDF and Excel files', async () => {
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const pdfPath = path.join(outputDir, `test_${timestamp}.pdf`);
+            const excelPath = path.join(outputDir, `test_${timestamp}.xlsx`);
+
+            // Generate small test report (10 pages)
+            const { html, workbook } = await generateLargeReport(10);
+            
+            // Test PDF generation
+            const pdfBuffer = await docGenerator.generatePDF(html);
+            await fs.writeFile(pdfPath, pdfBuffer);
+            const pdfStats = await fs.stat(pdfPath);
+            expect(pdfStats.size).to.be.above(0);
+
+            // Test Excel generation
+            await workbook.xlsx.writeFile(excelPath);
+            const excelStats = await fs.stat(excelPath);
+            expect(excelStats.size).to.be.above(0);
+
+            // Verify Excel content
+            const loadedWorkbook = new ExcelJS.Workbook();
+            await loadedWorkbook.xlsx.readFile(excelPath);
+            expect(loadedWorkbook.worksheets.length).to.equal(10);
+        });
+
+        it('should handle large data sets', async function() {
+            this.timeout(60000); // Set timeout to 1 minute
+            
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const pdfPath = path.join(outputDir, `test_large_${timestamp}.pdf`);
+            const excelPath = path.join(outputDir, `test_large_${timestamp}.xlsx`);
+
+            // Test with 100 pages
+            const { html, workbook } = await generateLargeReport(100);
+            
+            // Verify PDF generation performance
+            const startPDF = Date.now();
+            const pdfBuffer = await docGenerator.generatePDF(html);
+            const pdfTime = Date.now() - startPDF;
+            expect(pdfTime).to.be.below(30000); // Should complete within 30 seconds
+
+            // Verify Excel generation performance
+            const startExcel = Date.now();
+            await workbook.xlsx.writeFile(excelPath);
+            const excelTime = Date.now() - startExcel;
+            expect(excelTime).to.be.below(10000); // Should complete within 10 seconds
+        });
+    });
+
+    describe('Error Handling', () => {
+        it('should handle memory limits', async () => {
+            try {
+                // Try to generate extremely large report
+                await generateLargeReport(5000);
+                expect.fail('Should throw memory error');
+            } catch (error) {
+                expect(error).to.exist;
+            }
+        });
+
+        it('should handle file system errors', async () => {
+            const invalidPath = '/invalid/path/test.pdf';
+            try {
+                await fs.writeFile(invalidPath, Buffer.from('test'));
+                expect.fail('Should throw file system error');
+            } catch (error) {
+                expect(error).to.exist;
+            }
+        });
+    });
+}); 

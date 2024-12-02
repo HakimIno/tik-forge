@@ -78,6 +78,16 @@ jobs:
           PYTHON: python3
           npm_config_node_gyp: $(which node-gyp)
 
+      - name: Install dependencies
+        run: npm install
+      
+      # แยก unit test และ integration test
+      - name: Run unit tests
+        run: npm run test:unit
+      
+      - name: Run integration tests
+        run: npm run test:integration
+
   deploy:
     needs: test
     if: startsWith(github.ref, 'refs/tags/v')

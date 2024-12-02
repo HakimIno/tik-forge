@@ -9,9 +9,9 @@
     "build": "node-gyp rebuild && zig build",
     "clean": "rm -rf build/ zig-out/ zig-cache/",
     "prebuild": "npm run clean",
-    "test": "mocha test/**/*.test.js",
-    "test:unit": "mocha test/unit/**/*.test.js",
-    "test:integration": "mocha test/integration/**/*.test.js",
+    "test": "mocha 'test/**/*.test.js' --timeout 10000",
+    "test:unit": "mocha 'test/unit/**/*.test.js'",
+    "test:integration": "mocha 'test/integration/**/*.test.js'",
     "test:coverage": "nyc mocha test/**/*.test.js",
     "debug": "NODE_DEBUG=module node --napi-modules ./index.js"
   },
@@ -41,8 +41,9 @@
   },
   "devDependencies": {
     "chai": "^4.5.0",
-    "mocha": "^10.8.2",
-    "nyc": "^15.1.0"
+    "mocha": "^10.0.0",
+    "nyc": "^15.1.0",
+    "node-gyp": "^10.0.0"
   },
   "binary": {
     "module_path": "zig-out/lib",
