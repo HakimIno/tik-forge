@@ -5,7 +5,7 @@
   "scripts": {
     "build": "npm run clean && node scripts/build.js",
     "prebuild": "node scripts/build.js && prebuildify --napi --strip -t 18.0.0 -t 20.0.0",
-    "install": "prebuild-install --verbose || npm run build",
+    "install": "node scripts/build.js",
     "postinstall": "node scripts/postinstall.js",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "mocha \"test/unit/**/*.test.js\" --timeout 10000",
@@ -40,8 +40,8 @@
     "multi-threading"
   ],
   "dependencies": {
-    "node-addon-api": "^7.1.1",
-    "node-api-headers": "^1.4.0",
+    "node-addon-api": "^7.0.0",
+    "node-api-headers": "^1.1.0",
     "prebuild-install": "^7.1.1"
   },
   "devDependencies": {
@@ -51,7 +51,8 @@
     "node-pre-gyp-github": "^1.4.5",
     "npm-run-all": "^4.1.5",
     "nyc": "^15.1.0",
-    "prebuildify": "^5.0.1"
+    "prebuildify": "^5.0.1",
+    "node-gyp": "^10.0.1"
   },
   "binary": {
     "module_name": "tik-forge",
@@ -90,5 +91,11 @@
   "config": {
     "cache": true,
     "cache-min": "999999999"
-  }
+  },
+  "installConfig": {
+    "hoistingLimits": "workspaces"
+  },
+  "trustedDependencies": [
+    "tik-forge"
+  ]
 }

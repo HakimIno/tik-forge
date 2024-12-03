@@ -26,19 +26,26 @@ pub fn build(b: *std.Build) void {
     });
 
     // Add Node.js headers
-    const node_paths = [_][]const u8{
-        "node_modules/node-api-headers/include",
-        "node_modules/node-addon-api",
-        "node_modules/node-addon-api/src",
-        "node_modules/node-addon-api/external-napi",
-    };
+    const node_api_headers = b.pathJoin(&.{
+        "node_modules",
+        "node-api-headers",
+        "include",
+    });
+    const node_addon_api = b.pathJoin(&.{
+        "node_modules",
+        "node-addon-api",
+    });
 
-    for (node_paths) |path| {
-        lib.addIncludePath(.{ .cwd_relative = path });
-    }
+    lib.addIncludePath(.{ .cwd_relative = node_api_headers });
+    lib.addIncludePath(.{ .cwd_relative = node_addon_api });
+    lib.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ node_addon_api, "src" }) });
+    lib.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ node_addon_api, "external-napi" }) });
 
-    lib.addIncludePath(.{ .cwd_relative = "node_modules/node-api-headers/include" });
-    lib.addIncludePath(.{ .cwd_relative = "node_modules/node-addon-api" });
+    // เพิ่มการค้นหา node_api.h จาก node installation
+    const node_include = b.pathJoin(&.{
+        "/usr/local/include/node",  // สำหรับ Node.js ที่ติดตั้งผ่าน Homebrew
+    });
+    lib.addIncludePath(.{ .cwd_relative = node_include });
 
     if (is_macos) {
         const sdk_path = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk";

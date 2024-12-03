@@ -1,63 +1,85 @@
 const path = require('path');
 const fs = require('fs');
 const { execSync } = require('child_process');
+const https = require('https');
+
+async function createGitHubRelease(token, owner, repo, tagName, name, body) {
+    return new Promise((resolve, reject) => {
+        const data = JSON.stringify({
+            tag_name: tagName,
+            name: name,
+            body: body,
+            draft: false,
+            prerelease: false
+        });
+
+        const options = {
+            hostname: 'api.github.com',
+            path: `/repos/${owner}/${repo}/releases`,
+            method: 'POST',
+            headers: {
+                'Accept': 'application/vnd.github.v3+json',
+                'Authorization': `token ${token}`,
+                'User-Agent': 'Node.js',
+                'Content-Type': 'application/json',
+                'Content-Length': data.length
+            }
+        };
+
+        const req = https.request(options, (res) => {
+            let responseData = '';
+            res.on('data', (chunk) => responseData += chunk);
+            res.on('end', () => {
+                if (res.statusCode === 201) {
+                    resolve(JSON.parse(responseData));
+                } else {
+                    reject(new Error(`GitHub API responded with status ${res.statusCode}: ${responseData}`));
+                }
+            });
+        });
+
+        req.on('error', reject);
+        req.write(data);
+        req.end();
+    });
+}
 
 async function publishPrebuilds() {
     try {
-        // สร้างโฟลเดอร์ prebuilds ถ้ายังไม่มี
-        const prebuildsDir = path.join(__dirname, '..', 'prebuilds');
-        if (!fs.existsSync(prebuildsDir)) {
-            fs.mkdirSync(prebuildsDir, { recursive: true });
-        }
-
-        // รัน prebuildify
-        console.log('Running prebuildify...');
-        execSync('prebuildify --napi --strip -t 18.0.0 -t 20.0.0', {
-            stdio: 'inherit'
-        });
-
-        // ตรวจสอบว่ามีไฟล์ใน prebuilds หรือไม่
-        const files = fs.readdirSync(prebuildsDir);
-        if (files.length === 0) {
-            throw new Error('No prebuilt binaries were generated');
-        }
-
-        console.log('Copying prebuilt binaries to node-pre-gyp location...');
-        const prebuildFile = path.join(prebuildsDir, 'darwin-x64', 'node.napi.node');
-        const targetFile = path.join(prebuildsDir, 'darwin-x64', 'tik-forge.node');
-        if (fs.existsSync(prebuildFile)) {
-            fs.copyFileSync(prebuildFile, targetFile);
-        }
-
-        // Package prebuilds
-        console.log('Packaging prebuilds...');
-        execSync('npx node-pre-gyp package', {
-            stdio: 'inherit'
-        });
-
-        // Publish to GitHub releases
-        if (!process.env.GITHUB_TOKEN) {
-            throw new Error('GITHUB_TOKEN environment variable is not set');
-        }
-
-        console.log('Publishing prebuilds to GitHub releases...');
-        
         // Get version from package.json
         const packageJson = require('../package.json');
         const version = packageJson.version;
         const tagName = `v${version}`;
 
-        // Create tag first
+        // Create tag
+        console.log('Creating git tag...');
         try {
-            console.log('Creating git tag...');
             execSync('git fetch --all --tags');
+            execSync(`git tag -d ${tagName} 2>/dev/null || true`);
+            execSync(`git push origin :refs/tags/${tagName} 2>/dev/null || true`);
             execSync(`git tag -a ${tagName} -m "Release ${tagName}"`);
             execSync(`git push origin ${tagName}`);
         } catch (error) {
-            console.log('Tag might already exist, continuing...');
+            console.log('Tag operation warning:', error.message);
         }
 
-        // Now publish
+        // Create GitHub release
+        console.log('Creating GitHub release...');
+        await createGitHubRelease(
+            process.env.GITHUB_TOKEN,
+            'HakimIno',
+            'tik-forge',
+            tagName,
+            tagName,
+            `tik-forge ${version}`
+        );
+
+        // Now publish the prebuilds
+        console.log('Publishing prebuilds...');
+        execSync('npx node-pre-gyp package', {
+            stdio: 'inherit'
+        });
+
         execSync('npx node-pre-gyp-github publish', {
             stdio: 'inherit',
             env: {
@@ -73,4 +95,4 @@ async function publishPrebuilds() {
     }
 }
 
-publishPrebuilds().catch(console.error); 
+publishPrebuilds().catch(console.error);
