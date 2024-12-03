@@ -46,7 +46,8 @@ async function publishPrebuilds() {
             env: {
                 ...process.env,
                 NODE_PRE_GYP_GITHUB_TOKEN: process.env.GITHUB_TOKEN,
-                NODE_PRE_GYP_GITHUB_BRANCH: 'main'
+                NODE_PRE_GYP_GITHUB_BRANCH: 'main',
+                NODE_PRE_GYP_GITHUB_TARGET_BRANCH: 'main'
             }
         });
 
