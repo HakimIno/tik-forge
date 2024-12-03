@@ -5,6 +5,16 @@ const { execSync } = require('child_process');
 
 async function build() {
     try {
+        if (process.env.npm_config_global) {
+            console.log('Installing globally - checking for prebuilt binary...');
+            try {
+                require('prebuild-install')();
+                return;
+            } catch (err) {
+                console.log('No prebuilt binary found, falling back to build...');
+            }
+        }
+
         const platform = os.platform();
         const arch = os.arch();
         console.log(`Building for ${platform}-${arch}...`);

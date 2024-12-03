@@ -6,7 +6,7 @@
     "build": "npm run clean && node scripts/build.js",
     "build:only": "node scripts/build.js",
     "prebuild": "node scripts/build.js && prebuildify --napi --strip -t 18.0.0 -t 20.0.0",
-    "install": "prebuild-install || npm run build",
+    "install": "prebuild-install --verbose || npm run build",
     "postinstall": "node scripts/postinstall.js",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "mocha \"test/unit/**/*.test.js\" --timeout 10000",
@@ -14,7 +14,8 @@
     "test:coverage": "nyc mocha \"test/unit/**/*.test.js\" \"test/integration/**/*.test.js\" --timeout 10000",
     "test:watch": "mocha --watch \"test/unit/**/*.test.js\" \"test/integration/**/*.test.js\" --timeout 10000",
     "prepublishOnly": "npm run build && npm run test",
-    "clean": "rm -rf build/ zig-out/ zig-cache/ prebuilds/"
+    "clean": "rm -rf build/ zig-out/ zig-cache/ prebuilds/",
+    "publish-prebuild": "npm run prebuild && node scripts/publish-prebuild.js"
   },
   "main": "index.js",
   "types": "index.d.ts",
@@ -55,7 +56,7 @@
   "binary": {
     "module_name": "tik-forge",
     "module_path": "prebuilds/{platform}-{arch}",
-    "host": "https://github.com/YOUR_USERNAME/tik-forge/releases/download/",
+    "host": "https://github.com/HakimIno/tik-forge/releases/download/",
     "remote_path": "v{version}",
     "package_name": "prebuilds-{platform}-{arch}-node{node_abi}.tar.gz"
   },
