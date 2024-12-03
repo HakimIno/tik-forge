@@ -49,3 +49,4 @@ temp/
 cmd_git.bash
 # Project specific
 # Add any other files/folders specific to your project 
+.env

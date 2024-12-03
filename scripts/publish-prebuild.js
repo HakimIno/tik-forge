@@ -2,6 +2,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const pkg = require('../package.json');
+const glob = require('glob');
 
 async function publishPrebuilds() {
     try {
@@ -16,17 +17,25 @@ async function publishPrebuilds() {
             throw new Error('Prebuilds directory not found. Run npm run prebuild first.');
         }
 
-        // สร้าง release บน GitHub
-        console.log(`Creating release v${pkg.version}...`);
-        execSync(`gh release create v${pkg.version} --generate-notes`, { stdio: 'inherit' });
-
-        // อัพโหลดไฟล์ prebuilt binaries
-        const files = fs.readdirSync(prebuildsDir);
-        for (const file of files) {
-            const filePath = path.join(prebuildsDir, file);
-            console.log(`Uploading ${file}...`);
-            execSync(`gh release upload v${pkg.version} "${filePath}"`, { stdio: 'inherit' });
+        // สร้าง release บน GitHub หรือใช้ release ที่มีอยู่แล้ว
+        console.log(`Creating or updating release v${pkg.version}...`);
+        try {
+            execSync(`gh release create v${pkg.version} --generate-notes`, { stdio: 'inherit' });
+        } catch (error) {
+            // ถ้า release มีอยู่แล้ว ให้ดำเนินการต่อ
+            console.log('Release already exists, continuing with upload...');
         }
+
+        // อัพโหลดไฟล์
+        const platformName = `${process.platform}-${process.arch}`;
+        const prebuildPath = path.join(__dirname, '..', 'prebuilds', platformName, 'node.napi.node');
+
+        if (!fs.existsSync(prebuildPath)) {
+            throw new Error(`Prebuild file not found at: ${prebuildPath}`);
+        }
+
+        console.log(`Uploading ${prebuildPath}...`);
+        execSync(`gh release upload v${pkg.version} "${prebuildPath}" --clobber`, { stdio: 'inherit' });
 
         console.log('Successfully published prebuilds to GitHub Releases');
     } catch (error) {

@@ -71,14 +71,14 @@ pub fn build(b: *std.Build) void {
 
     // Set install step with correct output path
     const install_lib = b.addInstallArtifact(lib, .{
-        .dest_dir = .{ .override = .{ .custom = "zig-out" } },
+        .dest_dir = .{ .override = .{ .custom = "zig-out/lib" } },
     });
 
     // กำหนดชื่อไฟล์ output ให้ตรงกับที่ script ต้องการ
     if (is_macos) {
         lib.out_filename = "libtik-forge.node.dylib";
     } else if (is_linux) {
-        lib.out_filename = "tik-forge.node.so";
+        lib.out_filename = "libtik-forge.node.so";
     }
 
     b.getInstallStep().dependOn(&install_lib.step);

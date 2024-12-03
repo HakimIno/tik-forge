@@ -35,8 +35,8 @@ async function build() {
         
         // Search in possible locations
         const possiblePaths = [
-            path.join(zigOutDir, 'zig-out', libName),
             path.join(zigOutDir, 'lib', libName),
+            path.join(zigOutDir, 'zig-out/lib', libName),
             path.join(zigOutDir, libName)
         ];
 
@@ -67,6 +67,15 @@ async function build() {
         const symlinkTarget = path.join(libDir, libName);
         if (!fs.existsSync(symlinkTarget)) {
             fs.symlinkSync(sourceFile, symlinkTarget);
+        }
+
+        // Set executable permissions for Linux
+        if (platform === 'linux') {
+            try {
+                execSync(`chmod +x "${targetFile}"`);
+            } catch (err) {
+                console.warn('Warning: Could not set executable permissions:', err);
+            }
         }
 
         console.log('Build completed successfully');
