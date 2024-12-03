@@ -41,17 +41,28 @@ async function publishPrebuilds() {
         }
 
         console.log('Publishing prebuilds to GitHub releases...');
-        // Get current branch name
-        const currentBranch = execSync('git rev-parse --abbrev-ref HEAD', { 
-            stdio: 'pipe' 
-        }).toString().trim();
+        
+        // Get version from package.json
+        const packageJson = require('../package.json');
+        const version = packageJson.version;
+        const tagName = `v${version}`;
 
+        // Create tag first
+        try {
+            console.log('Creating git tag...');
+            execSync('git fetch --all --tags');
+            execSync(`git tag -a ${tagName} -m "Release ${tagName}"`);
+            execSync(`git push origin ${tagName}`);
+        } catch (error) {
+            console.log('Tag might already exist, continuing...');
+        }
+
+        // Now publish
         execSync('npx node-pre-gyp-github publish', {
             stdio: 'inherit',
             env: {
                 ...process.env,
-                NODE_PRE_GYP_GITHUB_TOKEN: process.env.GITHUB_TOKEN,
-                NODE_PRE_GYP_GITHUB_TARGET_COMMITISH: currentBranch
+                NODE_PRE_GYP_GITHUB_TOKEN: process.env.GITHUB_TOKEN
             }
         });
 
