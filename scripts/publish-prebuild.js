@@ -41,7 +41,7 @@ async function publishPrebuilds() {
         }
 
         console.log('Publishing prebuilds to GitHub releases...');
-        execSync('npx node-pre-gyp-github publish --release --target_commitish=main', {
+        execSync('npx node-pre-gyp-github publish --release', {
             stdio: 'inherit',
             env: {
                 ...process.env,
