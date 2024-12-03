@@ -41,11 +41,17 @@ async function publishPrebuilds() {
         }
 
         console.log('Publishing prebuilds to GitHub releases...');
-        execSync('npx node-pre-gyp-github publish --release', {
+        // Get current branch name
+        const currentBranch = execSync('git rev-parse --abbrev-ref HEAD', { 
+            stdio: 'pipe' 
+        }).toString().trim();
+
+        execSync('npx node-pre-gyp-github publish', {
             stdio: 'inherit',
             env: {
                 ...process.env,
-                NODE_PRE_GYP_GITHUB_TOKEN: process.env.GITHUB_TOKEN
+                NODE_PRE_GYP_GITHUB_TOKEN: process.env.GITHUB_TOKEN,
+                NODE_PRE_GYP_GITHUB_TARGET_COMMITISH: currentBranch
             }
         });
 
