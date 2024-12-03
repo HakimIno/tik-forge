@@ -1,52 +1,9 @@
 const path = require('path');
 const fs = require('fs');
 const { execSync } = require('child_process');
-const https = require('https');
-
-async function createGitHubRelease(token, owner, repo, tagName, name, body) {
-    return new Promise((resolve, reject) => {
-        const data = JSON.stringify({
-            tag_name: tagName,
-            name: name,
-            body: body,
-            draft: false,
-            prerelease: false
-        });
-
-        const options = {
-            hostname: 'api.github.com',
-            path: `/repos/${owner}/${repo}/releases`,
-            method: 'POST',
-            headers: {
-                'Accept': 'application/vnd.github.v3+json',
-                'Authorization': `token ${token}`,
-                'User-Agent': 'Node.js',
-                'Content-Type': 'application/json',
-                'Content-Length': data.length
-            }
-        };
-
-        const req = https.request(options, (res) => {
-            let responseData = '';
-            res.on('data', (chunk) => responseData += chunk);
-            res.on('end', () => {
-                if (res.statusCode === 201) {
-                    resolve(JSON.parse(responseData));
-                } else {
-                    reject(new Error(`GitHub API responded with status ${res.statusCode}: ${responseData}`));
-                }
-            });
-        });
-
-        req.on('error', reject);
-        req.write(data);
-        req.end();
-    });
-}
 
 async function publishPrebuilds() {
     try {
-        // Get version from package.json
         const packageJson = require('../package.json');
         const version = packageJson.version;
         const tagName = `v${version}`;
@@ -63,30 +20,36 @@ async function publishPrebuilds() {
             console.log('Tag operation warning:', error.message);
         }
 
-        // Create GitHub release
+        // Build prebuilds
+        console.log('Building prebuilds...');
+        execSync('npm run prebuild', { stdio: 'inherit' });
+
+        // Create GitHub release and upload prebuilds
         console.log('Creating GitHub release...');
-        await createGitHubRelease(
-            process.env.GITHUB_TOKEN,
-            'HakimIno',
-            'tik-forge',
-            tagName,
-            tagName,
-            `tik-forge ${version}`
-        );
+        const prebuildsDir = path.join(__dirname, '..', 'prebuilds');
+        const files = fs.readdirSync(prebuildsDir);
 
-        // Now publish the prebuilds
-        console.log('Publishing prebuilds...');
-        execSync('npx node-pre-gyp package', {
-            stdio: 'inherit'
-        });
-
-        execSync('npx node-pre-gyp-github publish', {
-            stdio: 'inherit',
-            env: {
-                ...process.env,
-                NODE_PRE_GYP_GITHUB_TOKEN: process.env.GITHUB_TOKEN
+        for (const file of files) {
+            const filePath = path.join(prebuildsDir, file);
+            if (fs.statSync(filePath).isDirectory()) {
+                const prebuildFile = path.join(filePath, 'node.napi.node');
+                if (fs.existsSync(prebuildFile)) {
+                    const targetFile = path.join(filePath, 'tik-forge.node');
+                    fs.copyFileSync(prebuildFile, targetFile);
+                }
             }
-        });
+        }
+
+        // Create release using GitHub API
+        const releaseData = {
+            tag_name: tagName,
+            name: tagName,
+            body: `tik-forge ${version}`,
+            draft: false,
+            prerelease: false
+        };
+
+        execSync(`curl -X POST -H "Authorization: token ${process.env.GITHUB_TOKEN}" -H "Content-Type: application/json" -d '${JSON.stringify(releaseData)}' https://api.github.com/repos/HakimIno/tik-forge/releases`, { stdio: 'inherit' });
 
         console.log('Prebuilds published successfully');
     } catch (error) {
