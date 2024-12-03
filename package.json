@@ -4,7 +4,6 @@
   "description": "A high-performance document processing library for Node.js, built with Zig. Provides native implementations for Excel, Word, and PDF manipulation with optimized memory usage and multi-threading capabilities.",
   "scripts": {
     "build": "npm run clean && node scripts/build.js",
-    "build:only": "node scripts/build.js",
     "prebuild": "node scripts/build.js && prebuildify --napi --strip -t 18.0.0 -t 20.0.0",
     "install": "prebuild-install --verbose || npm run build",
     "postinstall": "node scripts/postinstall.js",
@@ -15,7 +14,7 @@
     "test:watch": "mocha --watch \"test/unit/**/*.test.js\" \"test/integration/**/*.test.js\" --timeout 10000",
     "prepublishOnly": "npm run build && npm run test",
     "clean": "rm -rf build/ zig-out/ zig-cache/ prebuilds/",
-    "publish-prebuild": "npm run prebuild && node scripts/publish-prebuild.js"
+    "publish-prebuild": "node scripts/build.js && prebuildify --napi --strip -t 18.0.0 -t 20.0.0 && node scripts/publish-prebuild.js"
   },
   "main": "index.js",
   "types": "index.d.ts",
@@ -41,24 +40,25 @@
     "multi-threading"
   ],
   "dependencies": {
-    "exceljs": "^4.4.0",
-    "node-addon-api": "^7.0.0",
-    "node-api-headers": "^1.1.0",
+    "node-addon-api": "^7.1.1",
+    "node-api-headers": "^1.4.0",
     "prebuild-install": "^7.1.1"
   },
   "devDependencies": {
-    "mocha": "^10.2.0",
-    "nyc": "^15.1.0",
+    "@mapbox/node-pre-gyp": "^1.0.11",
     "chai": "^4.3.10",
+    "mocha": "^10.2.0",
+    "node-pre-gyp-github": "^1.4.5",
     "npm-run-all": "^4.1.5",
+    "nyc": "^15.1.0",
     "prebuildify": "^5.0.1"
   },
   "binary": {
     "module_name": "tik-forge",
-    "module_path": "prebuilds/{platform}-{arch}",
+    "module_path": "./prebuilds/{platform}-{arch}",
     "host": "https://github.com/HakimIno/tik-forge/releases/download/",
-    "remote_path": "v{version}",
-    "package_name": "prebuilds-{platform}-{arch}-node{node_abi}.tar.gz"
+    "package_name": "{module_name}-v{version}-{platform}-{arch}.tar.gz",
+    "remote_path": "v{version}"
   },
   "repository": {
     "type": "git",

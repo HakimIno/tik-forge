@@ -1,43 +1,55 @@
-const { execSync } = require('child_process');
-const fs = require('fs');
 const path = require('path');
-const pkg = require('../package.json');
-const glob = require('glob');
+const fs = require('fs');
+const { execSync } = require('child_process');
 
 async function publishPrebuilds() {
     try {
-        // ตรวจสอบว่ามี GITHUB_TOKEN
-        if (!process.env.GITHUB_TOKEN) {
-            throw new Error('GITHUB_TOKEN environment variable is required');
-        }
-
-        // ตรวจสอบว่ามีโฟลเดอร์ prebuilds
+        // สร้างโฟลเดอร์ prebuilds ถ้ายังไม่มี
         const prebuildsDir = path.join(__dirname, '..', 'prebuilds');
         if (!fs.existsSync(prebuildsDir)) {
-            throw new Error('Prebuilds directory not found. Run npm run prebuild first.');
+            fs.mkdirSync(prebuildsDir, { recursive: true });
         }
 
-        // สร้าง release บน GitHub หรือใช้ release ที่มีอยู่แล้ว
-        console.log(`Creating or updating release v${pkg.version}...`);
-        try {
-            execSync(`gh release create v${pkg.version} --generate-notes`, { stdio: 'inherit' });
-        } catch (error) {
-            // ถ้า release มีอยู่แล้ว ให้ดำเนินการต่อ
-            console.log('Release already exists, continuing with upload...');
+        // รัน prebuildify
+        console.log('Running prebuildify...');
+        execSync('prebuildify --napi --strip -t 18.0.0 -t 20.0.0', {
+            stdio: 'inherit'
+        });
+
+        // ตรวจสอบว่ามีไฟล์ใน prebuilds หรือไม่
+        const files = fs.readdirSync(prebuildsDir);
+        if (files.length === 0) {
+            throw new Error('No prebuilt binaries were generated');
         }
 
-        // อัพโหลดไฟล์
-        const platformName = `${process.platform}-${process.arch}`;
-        const prebuildPath = path.join(__dirname, '..', 'prebuilds', platformName, 'node.napi.node');
-
-        if (!fs.existsSync(prebuildPath)) {
-            throw new Error(`Prebuild file not found at: ${prebuildPath}`);
+        console.log('Copying prebuilt binaries to node-pre-gyp location...');
+        const prebuildFile = path.join(prebuildsDir, 'darwin-x64', 'node.napi.node');
+        const targetFile = path.join(prebuildsDir, 'darwin-x64', 'tik-forge.node');
+        if (fs.existsSync(prebuildFile)) {
+            fs.copyFileSync(prebuildFile, targetFile);
         }
 
-        console.log(`Uploading ${prebuildPath}...`);
-        execSync(`gh release upload v${pkg.version} "${prebuildPath}" --clobber`, { stdio: 'inherit' });
+        // Package prebuilds
+        console.log('Packaging prebuilds...');
+        execSync('npx node-pre-gyp package', {
+            stdio: 'inherit'
+        });
 
-        console.log('Successfully published prebuilds to GitHub Releases');
+        // Publish to GitHub releases
+        if (!process.env.GITHUB_TOKEN) {
+            throw new Error('GITHUB_TOKEN environment variable is not set');
+        }
+
+        console.log('Publishing prebuilds to GitHub releases...');
+        execSync('npx node-pre-gyp-github publish --release', {
+            stdio: 'inherit',
+            env: {
+                ...process.env,
+                NODE_PRE_GYP_GITHUB_TOKEN: process.env.GITHUB_TOKEN
+            }
+        });
+
+        console.log('Prebuilds published successfully');
     } catch (error) {
         console.error('Failed to publish prebuilds:', error);
         process.exit(1);
