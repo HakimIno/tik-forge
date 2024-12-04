@@ -1,103 +1,88 @@
 # TikForge
 
-A high-performance PDF and Excel generator library for Node.js
+A high-performance document generator for Node.js that supports PDF and Excel output formats. Built with Zig for maximum performance and reliability.
 
 ## Installation
 
 ```bash
-npm install tik-forge
-```
-
-```bash
 yarn add tik-forge
-```
-
-```bash
+# or
 bun add tik-forge
 ```
 
-## Requirements
-
-- Node.js >= 14.0.0
-- Python (for node-gyp)
-- C++ build tools
-- wkhtmltopdf (for PDF generation)
-- ssconvert (for Excel conversion)
-
 ## System Requirements
 
-### Supported Operating Systems
-- Windows (x64)
-- macOS (Intel x64 & Apple Silicon ARM64)
-- Linux (x64 & ARM64)
-
-### Prerequisites
 - Node.js >= 14.0.0
-- Zig compiler
-- Python (for node-gyp)
-- C/C++ build tools:
-  - Windows: Visual Studio Build Tools
-  - macOS: Xcode Command Line Tools
-  - Linux: GCC and development tools
+- wkhtmltopdf (for PDF generation)
+- node-xlsx (for Excel generation)
 
-### Supported Apple Silicon Macs
-- M1
-- M2
-- M3
-- Future Apple Silicon chips
+### Platform Support
+- Linux (x64, ARM64)
+- macOS (Intel x64, Apple Silicon)
+- Windows (x64)
 
-## Usage
+## Basic Usage
 
 ```javascript
 const tikForge = require('tik-forge');
 
-async function generateDocuments() {
+// Initialize the generator (required before use)
+tikForge.init();
+
+// Generate PDF
+async function generatePDF() {
   try {
-    await tikForge.generateFiles({
-      template: '<h1>{{title}}</h1>',
-      data: {
-        title: 'Hello World'
-      },
-      output: {
-        path: './output',
-        format: 'file',
-        pdf: {
-          filename: 'output.pdf'
-        },
-        excel: {
-          filename: 'output.xlsx'
-        }
-      }
-    });
+    const htmlContent = '<h1>Hello World</h1>';
+    const pdfBuffer = await tikForge.generatePDF(htmlContent);
+    // pdfBuffer is a Buffer containing the PDF data
   } catch (error) {
-    console.error('Generation failed:', error);
+    console.error('PDF generation failed:', error);
   }
 }
+
+// Generate Excel
+async function generateExcel() {
+  try {
+    const htmlTable = `
+      <table>
+        <tr><th>Name</th><th>Age</th></tr>
+        <tr><td>John</td><td>30</td></tr>
+      </table>
+    `;
+    const excelBuffer = await tikForge.generateExcel(htmlTable);
+    // excelBuffer is a Buffer containing the Excel data
+  } catch (error) {
+    console.error('Excel generation failed:', error);
+  }
+}
+
+// Clean up when done
+process.on('exit', () => {
+  tikForge.cleanup();
+});
 ```
-
-## Configuration
-
-Environment variables:
-- `TEMP_DIR`: Directory for temporary files
-- `MAX_CONCURRENT_OPS`: Maximum concurrent operations
-- `CACHE_SIZE`: Cache size in bytes
-- `TIMEOUT_MS`: Operation timeout in milliseconds
 
 ## API Reference
 
-### generateFiles(options)
+### init()
+Initializes the document generator. Must be called before using other functions.
 
-Generates PDF and Excel files from templates.
+### generatePDF(htmlContent: string): Promise<Buffer>
+Generates a PDF document from HTML content.
 
-Options:
-- `template`: HTML template string
-- `data`: Data to inject into template
-- `output`: Output configuration
-  - `path`: Output directory
-  - `format`: 'file' | 'base64' | 'buffer'
-  - `pdf`: PDF generation options
-  - `excel`: Excel generation options
+### generateExcel(htmlContent: string): Promise<Buffer>
+Generates an Excel document from HTML content.
 
-Returns: Promise<void>
+### cleanup()
+Cleans up resources. Should be called when the generator is no longer needed.
 
-zig build -freference-trace   
+## Configuration
+
+The generator uses these default settings:
+- Maximum concurrent jobs: 4
+- Buffer size: 50MB
+- Operation timeout: 10 minutes
+
+## License
+
+MIT

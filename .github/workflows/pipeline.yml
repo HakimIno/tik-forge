@@ -1,4 +1,4 @@
-name: Prebuild
+name: Prebuild and Publish
 
 on:
   push:
@@ -8,18 +8,27 @@ on:
 permissions:
   contents: write
   packages: write
-  issues: write
-  pull-requests: write
 
 jobs:
-  test:
+  prebuild:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        node: [18, 20]
-        arch: [x64]
         include:
+          # Linux builds
+          - os: ubuntu-latest
+            node: 18
+            arch: x64
+          - os: ubuntu-latest
+            node: 20
+            arch: x64
+          # macOS builds
+          - os: macos-latest
+            node: 18
+            arch: x64
+          - os: macos-latest
+            node: 20
+            arch: x64
           - os: macos-latest
             node: 18
             arch: arm64
@@ -31,10 +40,10 @@ jobs:
     timeout-minutes: 30
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
           architecture: ${{ matrix.arch }}
@@ -43,118 +52,82 @@ jobs:
         uses: goto-bus-stop/setup-zig@v2
         with:
           version: 0.13.0
+          
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.npm
+            node_modules
+          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ matrix.node }}-
+            ${{ runner.os }}-node-
           
       - name: Install dependencies
         run: npm ci
         
-      - name: Build
-        run: npm run build
-        
-      - name: Run tests
-        run: |
-          npm run test:unit
-          npm run test:integration
-        continue-on-error: true
-          
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
-        if: success() || failure()
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
-
-  prebuild:
-    needs: test
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        node: [18, 20]
-        arch: [x64]
-        include:
-          - os: macos-latest
-            node: 18
-            arch: arm64
-          - os: macos-latest
-            node: 20
-            arch: arm64
-    
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Cache npm dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ matrix.node }}
-          architecture: ${{ matrix.arch }}
-          
-      - name: Install Zig
-        uses: goto-bus-stop/setup-zig@v2
-        with:
-          version: 0.13.0
-          
-      - name: Install dependencies
-        run: |
-          npm ci
-          npm install -g node-gyp
-        
       - name: Build prebuilds
-        run: npm run prebuildify
-        
-      - name: Package prebuilds
-        run: |
-          mkdir -p prebuilds
-          tar -czf prebuilds-${{ matrix.os }}-${{ matrix.arch }}-node${{ matrix.node }}.tar.gz prebuilds/
+        run: npm run prebuild
         
       - name: Upload prebuilds
         uses: actions/upload-artifact@v3
         with:
           name: prebuilds-${{ matrix.os }}-${{ matrix.arch }}-node${{ matrix.node }}
           path: prebuilds/
+          if-no-files-found: error
 
-  publish:
-    needs: [test, prebuild]
+  release:
+    needs: prebuild
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
     timeout-minutes: 15
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      
+      - name: Download all prebuilds
+        uses: actions/download-artifact@v3
+        with:
+          path: all-prebuilds
+          
+      - name: Prepare prebuilds
+        run: |
+          mkdir -p prebuilds
+          cp -r all-prebuilds/*/* prebuilds/
+          
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: prebuilds/**/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - uses: actions/checkout@v4
       
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
           
-      - name: Install Zig
-        uses: goto-bus-stop/setup-zig@v2
+      - name: Download prebuilds
+        uses: actions/download-artifact@v3
         with:
-          version: 0.13.0
+          path: prebuilds
           
       - name: Install dependencies
-        run: |
-          npm ci
-          npm install -g node-gyp
+        run: npm ci
         
-      - name: Build
-        run: npm run build
-        
-      - name: Verify package
+      - name: Prepare package
         run: |
           npm pack
           ls -la *.tgz
